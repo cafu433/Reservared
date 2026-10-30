@@ -1,0 +1,23 @@
+{% extends "panel/base.html" %}
+{% block titulo %}Profesionales{% endblock %}
+{% block contenido %}
+<div class="cabecera">
+	<div><h1>Profesionales</h1><p class="cabecera__sub">Cada uno con su horario, sus servicios y, si quieres, su acceso al panel.</p></div>
+	<a class="boton" href="{{ url_for('panel.profesional') }}">Agregar profesional</a>
+</div>
+{% if not lista %}<p class="vacio">Todavía no hay profesionales. <a href="{{ url_for('panel.profesional') }}">Agrega el primero</a>.</p>{% else %}
+<div class="tabla-caja"><table>
+	<thead><tr><th>Profesional</th><th>Horario</th><th>Servicios</th><th>Acceso al panel</th></tr></thead>
+	<tbody>
+	{% for p in lista %}
+		<tr class="{{ 'fila-cancelada' if not p.activo }}">
+			<td><span class="punto" style="background: {{ color_de(p.id) }}"></span><a href="{{ url_for('panel.profesional', prof_id=p.id) }}"><strong>{{ p.nombre }}</strong></a>{% if p.titulo %}<span class="sub">{{ p.titulo }}</span>{% endif %}{% if not p.activo %}<span class="sub">Inactivo</span>{% endif %}</td>
+			<td>{% for h in p.horarios %}<span class="sub num">{{ DIAS_SEMANA[h.dia][:2] }} {{ h.inicio.strftime('%H:%M') }}–{{ h.fin.strftime('%H:%M') }}</span>{% else %}<span class="sub">Sin horario</span>{% endfor %}</td>
+			<td>{% if p.servicios %}{{ p.servicios|map(attribute='nombre')|join(', ') }}{% else %}<span class="sub">Todos</span>{% endif %}</td>
+			<td>{% if p.usuario and p.usuario.activo %}<span class="chip chip--confirmada">Sí</span><span class="sub">{{ p.usuario.email }}</span>{% else %}<span class="chip">No</span>{% endif %}</td>
+		</tr>
+	{% endfor %}
+	</tbody>
+</table></div>
+{% endif %}
+{% endblock %}

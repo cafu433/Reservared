@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% block titulo %}Reservar hora{% endblock %} · {{ negocio }}</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Figtree:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="{{ url_for('static', filename='publico.css') }}">
+<style>.ao-agenda { --ao-acento: {{ color or '#1f6f78' }}; }</style>
+</head>
+<body class="pagina {{ 'pagina--incrustada' if incrustado }}">
+{% if not incrustado %}
+<header class="pagina__cab">
+	<p class="pagina__negocio">{{ negocio }}</p>
+	<p class="pagina__sub">{% block subtitulo %}Reserva tu hora en línea{% endblock %}</p>
+</header>
+{% endif %}
+{% block contenido %}{% endblock %}
+{% if not incrustado %}<p class="pagina__pie">Reservas con Reservared</p>{% endif %}
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,46 @@
+# Configuración para Render. Al crear el servicio con "New → Blueprint" Render
+# lee este archivo; si lo creas a mano como "Web Service", copia estos valores.
+services:
+  - type: web
+    name: reservared
+    runtime: python
+    plan: starter
+    buildCommand: "pip install -r requirements.txt && flask db upgrade"
+    startCommand: "gunicorn wsgi:app --workers 2 --threads 8 --preload --timeout 60 --bind 0.0.0.0:$PORT"
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.4
+      - key: FLASK_APP
+        value: wsgi.py
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: NOMBRE_NEGOCIO
+        sync: false
+      - key: URL_PUBLICA
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_CLAVE
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PUERTO
+        value: "587"
+      - key: SMTP_USUARIO
+        sync: false
+      - key: SMTP_CLAVE
+        sync: false
+      - key: CORREO_REMITENTE
+        sync: false
+      - key: MP_ACCESS_TOKEN
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false

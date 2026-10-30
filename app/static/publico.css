@@ -1,0 +1,125 @@
+/* Agenda Online — formulario público. Hereda la tipografía del tema; el color
+   de acento se cambia en Agenda → Ajustes. */
+.ao-agenda {
+	--ao-acento: #1f6f78;
+	--ao-texto: #1d2327;
+	--ao-suave: #5b6670;
+	--ao-linea: #dcdfe3;
+	--ao-fondo: #ffffff;
+	--ao-tenue: #f4f6f7;
+	--ao-ok: #1e7b45;
+	--ao-error: #b42318;
+	--ao-radio: 10px;
+	color: var(--ao-texto);
+	background: var(--ao-fondo);
+	border: 1px solid var(--ao-linea);
+	border-radius: var(--ao-radio);
+	padding: clamp(16px, 4vw, 28px);
+	max-width: 760px;
+	margin: 1.5em auto;
+	box-sizing: border-box;
+	line-height: 1.5;
+	font-size: 16px;
+}
+.ao-agenda *, .ao-agenda *::before, .ao-agenda *::after { box-sizing: border-box; }
+.ao-agenda button { font: inherit; cursor: pointer; }
+.ao-agenda button:disabled { cursor: default; }
+.ao-agenda :focus-visible { outline: 2px solid var(--ao-acento); outline-offset: 2px; }
+
+.ao-cargando, .ao-nota { color: var(--ao-suave); margin: 0; }
+.ao-nota { font-size: 0.9em; }
+
+/* Pasos */
+.ao-pasos { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; margin: 0 0 14px; padding: 0; counter-reset: ao; font-size: 0.85em; color: var(--ao-suave); }
+.ao-pasos li { counter-increment: ao; display: flex; align-items: center; gap: 6px; margin: 0; }
+.ao-pasos li::before { content: counter(ao); display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--ao-linea); font-size: 0.85em; font-variant-numeric: tabular-nums; }
+.ao-pasos li.is-actual { color: var(--ao-texto); font-weight: 600; }
+.ao-pasos li.is-actual::before { background: var(--ao-acento); border-color: var(--ao-acento); color: #fff; }
+.ao-pasos li.is-hecho::before { content: "✓"; color: var(--ao-acento); border-color: var(--ao-acento); }
+
+.ao-resumen { margin: 0 0 16px; padding: 8px 12px; background: var(--ao-tenue); border-radius: 6px; font-size: 0.92em; }
+
+/* Opciones (servicios y profesionales) */
+.ao-lista { display: grid; gap: 10px; }
+.ao-opcion { display: grid; gap: 2px; text-align: left; width: 100%; padding: 14px 16px; background: var(--ao-fondo); color: var(--ao-texto); border: 1px solid var(--ao-linea); border-radius: 8px; transition: border-color .15s, box-shadow .15s; }
+.ao-opcion:hover { border-color: var(--ao-acento); }
+.ao-opcion.is-elegida { border-color: var(--ao-acento); box-shadow: inset 0 0 0 1px var(--ao-acento); }
+.ao-opcion__nombre { font-weight: 600; }
+.ao-opcion__meta { color: var(--ao-suave); font-size: 0.9em; font-variant-numeric: tabular-nums; }
+.ao-opcion__desc { color: var(--ao-suave); font-size: 0.9em; }
+
+/* Calendario */
+.ao-cal { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+@media (max-width: 620px) { .ao-cal { grid-template-columns: minmax(0, 1fr); } }
+.ao-cal__cab { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.ao-cal__mes { font-weight: 600; text-transform: capitalize; }
+.ao-cal__nav { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--ao-linea); background: var(--ao-fondo); color: var(--ao-texto); font-size: 1.2em; line-height: 1; }
+.ao-cal__nav:disabled { opacity: .35; }
+.ao-cal__grilla { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.ao-cal__grilla.is-cargando { opacity: .55; }
+.ao-cal__dow { text-align: center; font-size: 0.75em; color: var(--ao-suave); text-transform: uppercase; letter-spacing: .04em; padding: 4px 0; }
+.ao-cal__dia { aspect-ratio: 1; max-width: 100%; border: 0; border-radius: 6px; background: transparent; color: var(--ao-suave); font-variant-numeric: tabular-nums; opacity: .5; }
+.ao-cal__dia.is-libre { opacity: 1; color: var(--ao-texto); background: var(--ao-tenue); font-weight: 600; }
+.ao-cal__dia.is-libre:hover { box-shadow: inset 0 0 0 1px var(--ao-acento); }
+.ao-cal__dia.is-hoy { text-decoration: underline; text-underline-offset: 3px; }
+.ao-cal__dia.is-elegido { background: var(--ao-acento); color: #fff; }
+.ao-horas__titulo { font-weight: 600; margin: 0 0 10px; }
+.ao-horas__titulo::first-letter { text-transform: uppercase; }
+.ao-horas { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; }
+.ao-hora { padding: 10px 0; border: 1px solid var(--ao-linea); border-radius: 6px; background: var(--ao-fondo); color: var(--ao-texto); font-variant-numeric: tabular-nums; }
+.ao-hora:hover, .ao-hora.is-elegida { border-color: var(--ao-acento); color: var(--ao-acento); }
+
+/* Formulario */
+.ao-form { display: grid; gap: 14px; max-width: 460px; }
+.ao-campo { display: grid; gap: 4px; }
+.ao-campo label { font-size: 0.9em; font-weight: 600; }
+.ao-campo input, .ao-campo textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--ao-linea); border-radius: 6px; font: inherit; background: var(--ao-fondo); color: var(--ao-texto); }
+.ao-campo input[aria-invalid="true"] { border-color: var(--ao-error); }
+.ao-campo--check { grid-template-columns: auto 1fr; align-items: center; gap: 10px; }
+.ao-campo--check input { width: 18px; height: 18px; accent-color: var(--ao-acento); }
+.ao-campo--check label { font-weight: 400; }
+.ao-trampa { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+.ao-boton { display: inline-block; justify-self: start; padding: 12px 22px; border: 0; border-radius: 8px; background: var(--ao-acento); color: #fff; font-weight: 600; text-decoration: none; text-align: center; }
+.ao-boton:hover { filter: brightness(1.08); color: #fff; }
+.ao-boton:disabled { opacity: .6; }
+.ao-boton--sec { background: transparent; color: var(--ao-acento); box-shadow: inset 0 0 0 1px var(--ao-acento); }
+.ao-boton--sec:hover { color: var(--ao-acento); }
+.ao-boton--peligro { background: var(--ao-error); }
+.ao-volver { margin-top: 18px; padding: 6px 0; border: 0; background: none; color: var(--ao-suave); text-decoration: underline; text-underline-offset: 3px; }
+
+/* Avisos y ficha de la cita */
+.ao-aviso { margin: 14px 0 0; padding: 10px 14px; border-radius: 6px; background: var(--ao-tenue); }
+.ao-aviso--ok { background: #e7f4ec; color: var(--ao-ok); }
+.ao-aviso--error { background: #fdecea; color: var(--ao-error); }
+.ao-ficha { display: grid; gap: 10px; }
+.ao-ficha > * { margin: 0; }
+.ao-eyebrow { font-size: 0.78em; letter-spacing: .08em; text-transform: uppercase; color: var(--ao-acento); font-weight: 700; }
+.ao-ficha__titulo { font-size: 1.35em; line-height: 1.25; text-wrap: balance; margin: 0; text-transform: none; }
+.ao-ficha--lista .ao-ficha__titulo::first-letter { text-transform: uppercase; }
+.ao-datos { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 6px 18px; margin: 4px 0 6px; }
+.ao-datos dt { color: var(--ao-suave); font-size: 0.9em; }
+.ao-datos dd { margin: 0; }
+.ao-datos dd::first-letter { text-transform: uppercase; }
+.ao-estado { display: inline-block; padding: 1px 10px; border-radius: 99px; font-size: 0.85em; font-weight: 600; background: var(--ao-tenue); }
+.ao-estado--confirmada, .ao-estado--asistio { background: #e7f4ec; color: var(--ao-ok); }
+.ao-estado--pendiente { background: #fff4e0; color: #8a5300; }
+.ao-estado--cancelada, .ao-estado--no_asistio { background: #fdecea; color: var(--ao-error); }
+.ao-acciones { display: grid; gap: 8px; margin-top: 6px; }
+.ao-cancelar { margin-top: 8px; border-top: 1px solid var(--ao-linea); padding-top: 12px; }
+.ao-cancelar summary { cursor: pointer; color: var(--ao-suave); text-decoration: underline; text-underline-offset: 3px; }
+.ao-cancelar form { display: grid; gap: 10px; margin-top: 10px; }
+.ao-cancelar p { margin: 0; }
+
+@media (prefers-reduced-motion: reduce) { .ao-agenda * { transition: none !important; scroll-behavior: auto !important; } }
+
+/* Página pública de Reservared (fuera de WordPress). */
+.pagina { margin: 0; min-height: 100vh; background: #f3f5f4; color: #1d2327; font: 16px/1.5 "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif; padding: 28px max(16px, env(safe-area-inset-left, 0px)) 48px max(16px, env(safe-area-inset-right, 0px)); }
+.pagina--incrustada { background: transparent; padding: 0; min-height: 0; }
+.pagina--incrustada .ao-agenda { margin: 0 auto; }
+.pagina__cab { max-width: 760px; margin: 0 auto 4px; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.pagina__negocio { font-family: "Bricolage Grotesque", "Figtree", system-ui, sans-serif; font-size: 1.5rem; font-weight: 700; margin: 0; text-wrap: balance; }
+.pagina__sub { color: #5b6670; margin: 0; }
+.pagina__pie { max-width: 760px; margin: 0 auto; text-align: center; font-size: 0.8rem; color: #8a959c; }
+.pagina__pie a { color: inherit; }
+.ao-sesion { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }

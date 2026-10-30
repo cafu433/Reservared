@@ -1,0 +1,78 @@
+{% extends "panel/base.html" %}
+{% block titulo %}Agenda{% endblock %}
+{% block contenido %}
+{% set alto_px = horas|length * 56 %}
+<div class="cabecera">
+	<div>
+		<h1>Agenda</h1>
+		<p class="cabecera__sub">{{ citas_semana }} {{ 'cita' if citas_semana == 1 else 'citas' }} esta semana</p>
+	</div>
+	<div class="acciones">
+		{% if current_user.es_admin and visibles|length > 1 %}
+		<form method="get" class="acciones">
+			<input type="hidden" name="semana" value="{{ lunes.isoformat() }}">
+			<label for="profesional" class="ayuda">Ver</label>
+			<select id="profesional" name="profesional" onchange="this.form.submit()">
+				<option value="">Todo el equipo</option>
+				{% for p in visibles %}<option value="{{ p.id }}" {{ 'selected' if elegido == p.id }}>{{ p.nombre }}</option>{% endfor %}
+			</select>
+			<noscript><button class="boton boton--sec boton--chico">Ver</button></noscript>
+		</form>
+		{% endif %}
+		<a class="boton" href="{{ url_for('panel.cita_nueva', profesional=elegido or '') }}">Nueva cita</a>
+	</div>
+</div>
+
+<div class="cabecera" style="margin-bottom:12px">
+	<div class="semana-nav">
+		<a class="boton boton--sec boton--chico" href="{{ url_for('panel.agenda', semana=semana_anterior.isoformat(), profesional=elegido or '') }}" aria-label="Semana anterior">‹</a>
+		<a class="boton boton--sec boton--chico" href="{{ url_for('panel.agenda', profesional=elegido or '') }}">Hoy</a>
+		<a class="boton boton--sec boton--chico" href="{{ url_for('panel.agenda', semana=semana_siguiente.isoformat(), profesional=elegido or '') }}" aria-label="Semana siguiente">›</a>
+		<span class="semana-nav__rango">{{ rango }}</span>
+	</div>
+</div>
+
+{% if not visibles %}
+	<p class="vacio">Todavía no hay profesionales activos. {% if current_user.es_admin %}<a href="{{ url_for('panel.profesional') }}">Agrega el primero</a>.{% endif %}</p>
+{% else %}
+<div class="agenda-caja">
+	<div class="agenda" style="--alto-hora: 56px">
+		<div class="agenda__cab" style="border-right:1px solid var(--linea)"></div>
+		{% for col in columnas %}
+			<div class="agenda__cab {{ 'agenda__cab--hoy' if col.hoy }}"><span>{{ DIAS_SEMANA[col.dia.weekday()][:3] }}</span><strong>{{ col.dia.day }}</strong></div>
+		{% endfor %}
+
+		<div class="agenda__horas" style="height: {{ alto_px }}px">
+			{% for h in horas %}{% if not loop.first %}<span class="agenda__hora" style="top: {{ (loop.index0 * 56) }}px">{{ '%02d'|format(h) }}:00</span>{% endif %}{% endfor %}
+		</div>
+		{% for col in columnas %}
+			<div class="agenda__col {{ 'agenda__col--hoy' if col.hoy }}" style="height: {{ alto_px }}px">
+				{% for h in horas %}
+					<a class="agenda__vacio" style="top: {{ loop.index0 * 56 }}px; height: 56px" href="{{ url_for('panel.cita_nueva', fecha=col.dia.isoformat(), hora='%02d:00'|format(h), profesional=elegido or '') }}" aria-label="Nueva cita el {{ col.dia|dia_largo }} a las {{ '%02d'|format(h) }}:00" tabindex="-1"></a>
+				{% endfor %}
+				{% for b in col.bloqueos %}
+					<div class="bloqueo" style="top: {{ b.top }}%; height: {{ b.alto }}%">{{ b.motivo or 'Bloqueado' }}</div>
+				{% endfor %}
+				{% for b in col.bloques %}
+					{% set c = b.cita %}
+					<a class="bloque bloque--{{ c.estado }}" href="{{ url_for('panel.cita', cita_id=c.id) }}"
+					   style="--c: {{ color_de(c.profesional_id) }}; top: {{ b.top }}%; height: {{ b.alto }}%; left: calc({{ 100 / b.carriles * b.carril }}% + 3px); width: calc({{ 100 / b.carriles }}% - 6px)"
+					   title="{{ c.inicio.strftime('%H:%M') }}–{{ c.fin.strftime('%H:%M') }} · {{ c.nombre }} · {{ c.servicio.nombre }} · {{ c.profesional.nombre }} · {{ c.estado_texto }}">
+						<strong>{{ c.nombre }}</strong>
+						<span class="bloque__hora">{{ c.inicio.strftime('%H:%M') }}{{ ' · online' if c.servicio.online }}</span>
+					</a>
+				{% endfor %}
+				{% if col.hoy and linea_ahora is not none %}<div class="linea-ahora" style="top: {{ linea_ahora }}%"></div>{% endif %}
+			</div>
+		{% endfor %}
+	</div>
+</div>
+<div class="leyenda">
+	{% if not elegido and visibles|length > 1 %}
+		{% for p in visibles %}<span><span class="punto" style="background: {{ color_de(p.id) }}"></span>{{ p.nombre }}</span>{% endfor %}
+	{% endif %}
+	<span>Borde punteado: pendiente</span>
+	<span>Clic en un espacio vacío: nueva cita</span>
+</div>
+{% endif %}
+{% endblock %}

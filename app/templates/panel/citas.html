@@ -1,0 +1,39 @@
+{% extends "panel/base.html" %}
+{% block titulo %}Citas{% endblock %}
+{% block contenido %}
+<div class="cabecera">
+	<div><h1>Citas</h1><p class="cabecera__sub">{{ total }} en el periodo</p></div>
+	<a class="boton" href="{{ url_for('panel.cita_nueva') }}">Nueva cita</a>
+</div>
+<form method="get" class="filtros">
+	<div class="campo"><label for="desde">Desde</label><input id="desde" type="date" name="desde" value="{{ desde.isoformat() }}"></div>
+	<div class="campo"><label for="hasta">Hasta</label><input id="hasta" type="date" name="hasta" value="{{ hasta.isoformat() }}"></div>
+	{% if current_user.es_admin %}
+	<div class="campo"><label for="profesional">Profesional</label>
+		<select id="profesional" name="profesional"><option value="">Todos</option>{% for p in visibles %}<option value="{{ p.id }}" {{ 'selected' if prof == p.id }}>{{ p.nombre }}</option>{% endfor %}</select></div>
+	{% endif %}
+	<div class="campo"><label for="estado">Estado</label>
+		<select id="estado" name="estado"><option value="">Todos</option>{% for k, v in ESTADOS.items() %}<option value="{{ k }}" {{ 'selected' if estado == k }}>{{ v }}</option>{% endfor %}</select></div>
+	<div class="campo"><label for="q">Buscar</label><input id="q" type="search" name="q" value="{{ texto }}" placeholder="Nombre, RUT, correo…"></div>
+	<button class="boton boton--sec">Filtrar</button>
+</form>
+{% if not por_dia %}<p class="vacio">No hay citas con estos filtros.</p>{% endif %}
+{% for dia, lista in por_dia.items() %}
+	<h2 class="dia-titulo">{{ dia|dia_largo }}</h2>
+	<div class="tabla-caja"><table>
+		<thead><tr><th>Hora</th><th>Paciente</th><th>Servicio</th>{% if current_user.es_admin %}<th>Profesional</th>{% endif %}<th>Pago</th><th>Estado</th></tr></thead>
+		<tbody>
+		{% for c in lista %}
+			<tr class="{{ 'fila-cancelada' if c.estado == 'cancelada' }}">
+				<td class="num"><a href="{{ url_for('panel.cita', cita_id=c.id) }}"><strong>{{ c.inicio.strftime('%H:%M') }}</strong>–{{ c.fin.strftime('%H:%M') }}</a></td>
+				<td><a href="{{ url_for('panel.cita', cita_id=c.id) }}"><strong>{{ c.nombre }}</strong></a><span class="sub">{{ c.telefono }}{% if c.rut %} · {{ c.rut }}{% endif %}</span></td>
+				<td>{{ c.servicio.nombre }}{% if c.servicio.online %} <span class="chip chip--online">online</span>{% endif %}</td>
+				{% if current_user.es_admin %}<td><span class="punto" style="background: {{ color_de(c.profesional_id) }}"></span>{{ c.profesional.nombre }}</td>{% endif %}
+				<td><span class="chip chip--{{ c.estado_pago }}">{{ c.estado_pago_texto }}</span>{% if c.monto %}<span class="sub num">{{ c.monto|pesos }}</span>{% endif %}</td>
+				<td><span class="chip chip--{{ c.estado }}">{{ c.estado_texto }}</span></td>
+			</tr>
+		{% endfor %}
+		</tbody>
+	</table></div>
+{% endfor %}
+{% endblock %}

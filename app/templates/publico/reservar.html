@@ -1,0 +1,13 @@
+{% extends "publico/base.html" %}
+{% block contenido %}
+{% if sin_datos %}
+	<div class="ao-agenda"><p class="ao-aviso">Las reservas en línea no están disponibles por ahora.</p></div>
+{% else %}
+	<script type="application/json" id="config-reserva">{{ config|tojson }}</script>
+	<div class="ao-agenda" data-config="config-reserva">
+		<noscript><p class="ao-aviso">Para reservar necesitas activar JavaScript en tu navegador.</p></noscript>
+		<p class="ao-cargando">Cargando la agenda…</p>
+	</div>
+{% endif %}
+{% endblock %}
+{% block scripts %}{% if not sin_datos %}<script src="{{ url_for('static', filename='publico.js') }}"></script>{% endif %}{% endblock %}

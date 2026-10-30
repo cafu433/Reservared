@@ -1,0 +1,10 @@
+{% extends "panel/entrada_base.html" %}
+{% block titulo %}Nueva contraseña{% endblock %}
+{% block contenido %}
+<h1 style="font-size:1.2rem">Elige tu contraseña</h1>
+<form method="post" class="formulario">
+	{% include "panel/_csrf.html" %}
+	<div class="campo"><label for="clave">Contraseña nueva</label><input id="clave" name="clave" type="password" minlength="8" autocomplete="new-password" required autofocus><small>Al menos 8 caracteres.</small></div>
+	<button class="boton">Guardar</button>
+</form>
+{% endblock %}

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{% block titulo %}Panel{% endblock %} · Reservared</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="{{ url_for('static', filename='panel.css') }}">
+</head>
+<body>
+{% set pagina = request.endpoint %}
+<div class="app">
+	<aside class="barra">
+		<a class="marca" href="{{ url_for('panel.agenda') }}">
+			<span class="marca__punto" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><circle cx="4" cy="4" r="1.6"/><circle cx="12" cy="4" r="1.6"/><circle cx="8" cy="12" r="1.6"/><path d="M5.4 4.6 7 10.6M10.6 4.6 9 10.6M5.6 4h4.8"/></svg></span>
+			Reservared
+		</a>
+		<div class="negocio">{{ negocio }}</div>
+		<details class="menu-movil"><summary>Menú</summary></details>
+		<nav class="nav" aria-label="Secciones">
+			<a href="{{ url_for('panel.agenda') }}" class="{{ 'activo' if pagina == 'panel.agenda' }}">Agenda</a>
+			<a href="{{ url_for('panel.citas') }}" class="{{ 'activo' if pagina in ('panel.citas', 'panel.cita', 'panel.cita_nueva') }}">Citas</a>
+			<a href="{{ url_for('panel.pacientes') }}" class="{{ 'activo' if pagina == 'panel.pacientes' }}">Pacientes</a>
+			<a href="{{ url_for('panel.bloqueos') }}" class="{{ 'activo' if pagina == 'panel.bloqueos' }}">Bloqueos</a>
+			{% if current_user.es_admin %}
+				<div class="nav__grupo">Administración</div>
+				<a href="{{ url_for('panel.profesionales') }}" class="{{ 'activo' if pagina in ('panel.profesionales', 'panel.profesional') }}">Profesionales</a>
+				<a href="{{ url_for('panel.servicios') }}" class="{{ 'activo' if pagina == 'panel.servicios' }}">Servicios</a>
+				<a href="{{ url_for('panel.equipo') }}" class="{{ 'activo' if pagina == 'panel.equipo' }}">Equipo</a>
+				<a href="{{ url_for('panel.ajustes_pagina') }}" class="{{ 'activo' if pagina == 'panel.ajustes_pagina' }}">Ajustes</a>
+			{% elif current_user.profesional_id %}
+				<a href="{{ url_for('panel.mi_horario') }}" class="{{ 'activo' if pagina == 'panel.profesional' }}">Mi horario</a>
+			{% endif %}
+			<a href="{{ url_for('publico.reservar_pagina') }}" target="_blank" rel="noopener">Página de reservas ↗</a>
+		</nav>
+		<div class="barra__pie">
+			<span>{{ current_user.nombre }}</span>
+			<a href="{{ url_for('panel.cuenta') }}" style="color:inherit">Mi contraseña</a>
+			<form method="post" action="{{ url_for('panel.salir') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button>Salir</button></form>
+		</div>
+	</aside>
+	<main class="principal">
+		{% with mensajes = get_flashed_messages(with_categories=true) %}
+			{% if mensajes %}<div class="avisos" role="status">{% for cat, m in mensajes %}<p class="aviso aviso--{{ cat }}">{{ m }}</p>{% endfor %}</div>{% endif %}
+		{% endwith %}
+		{% block contenido %}{% endblock %}
+	</main>
+</div>
+</body>
+</html>

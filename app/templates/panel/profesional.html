@@ -1,0 +1,65 @@
+{% extends "panel/base.html" %}
+{% block titulo %}{{ p.nombre or 'Nuevo profesional' }}{% endblock %}
+{% block contenido %}
+<div class="cabecera"><div><h1>{{ p.nombre or 'Nuevo profesional' }}</h1>{% if p.titulo %}<p class="cabecera__sub">{{ p.titulo }}</p>{% endif %}</div></div>
+{% if clave_mostrar %}
+<div class="aviso aviso--aviso" style="margin-bottom:16px">
+	Acceso creado. Le enviamos a <strong>{{ clave_mostrar.email }}</strong> un enlace para elegir su contraseña.
+	Si el correo no le llega, puede entrar con esta contraseña temporal (se muestra sólo esta vez): <code>{{ clave_mostrar.clave }}</code>
+</div>
+{% endif %}
+<form method="post" class="formulario">
+	{% include "panel/_csrf.html" %}
+	<div class="dos">
+		<section class="hoja formulario">
+			<h2>Horario semanal</h2>
+			<p class="ayuda" style="margin:0">Hasta dos tramos por día, por ejemplo mañana y tarde. Deja vacío el día que no atiende. Para vacaciones o un día puntual usa <a href="{{ url_for('panel.bloqueos') }}">Bloqueos</a>.</p>
+			<div style="overflow-x:auto"><table class="horario">
+				{% for nombre_dia in DIAS_SEMANA %}{% set dia = loop.index0 %}
+				<tr>
+					<th scope="row">{{ nombre_dia }}</th>
+					{% for i in range(2) %}{% set t = (tramos.get(dia) or [])[i] if (tramos.get(dia) or [])|length > i else ('', '') %}
+					<td>
+						<input type="time" step="300" name="h-{{ dia }}-{{ i }}-ini" value="{{ t[0] }}" aria-label="{{ nombre_dia }}, tramo {{ i + 1 }}, desde">
+						–
+						<input type="time" step="300" name="h-{{ dia }}-{{ i }}-fin" value="{{ t[1] }}" aria-label="{{ nombre_dia }}, tramo {{ i + 1 }}, hasta">
+					</td>
+					{% endfor %}
+				</tr>
+				{% endfor %}
+			</table></div>
+			<div class="campo"><label for="enlace_sala">Sala online fija <small>opcional</small></label>
+				<input id="enlace_sala" name="enlace_sala" type="url" value="{{ p.enlace_sala or '' }}" placeholder="https://meet.google.com/… o https://zoom.us/j/…">
+				<small>Se usa en las sesiones online cuando no hay un Google conectado para crear un Meet por cita.</small></div>
+		</section>
+
+		{% if admin %}
+		<section class="hoja formulario">
+			<h2>Datos</h2>
+			<div class="campo"><label for="nombre">Nombre</label><input id="nombre" name="nombre" required value="{{ p.nombre or '' }}"></div>
+			<div class="campo"><label for="titulo">Profesión o especialidad <small>la ve el paciente</small></label><input id="titulo" name="titulo" value="{{ p.titulo or '' }}" placeholder="Psicóloga clínica"></div>
+			<div class="campo"><label for="email">Correo <small>recibe el aviso de cada reserva</small></label><input id="email" name="email" type="email" value="{{ p.email or '' }}"></div>
+			<label class="check"><input type="checkbox" name="activo" value="1" {{ 'checked' if p.activo }}> Acepta reservas</label>
+			<label class="check"><input type="checkbox" name="acceso" value="1" {{ 'checked' if p.usuario and p.usuario.activo }}> Puede entrar al panel a ver su agenda</label>
+			<fieldset class="campo" style="border:0;padding:0;margin:0">
+				<legend style="font-weight:600;font-size:.9rem;margin-bottom:4px">Servicios que atiende</legend>
+				<small class="ayuda">Si no marcas ninguno, atiende todos.</small>
+				{% for s in todos_servicios %}
+					<label class="check"><input type="checkbox" name="servicios" value="{{ s.id }}" {{ 'checked' if s in p.servicios }}> {{ s.nombre }}{{ ' (inactivo)' if not s.activo }}</label>
+				{% endfor %}
+			</fieldset>
+		</section>
+		{% endif %}
+	</div>
+	<div class="acciones" style="margin-top:16px">
+		<button class="boton">Guardar</button>
+		{% if admin %}<a href="{{ url_for('panel.profesionales') }}">Volver</a>{% endif %}
+	</div>
+	{% if admin and p.id %}
+	<details style="margin-top:12px"><summary class="enlace-boton enlace-boton--peligro">Borrar profesional</summary>
+		<p class="ayuda">Si ya tiene citas, queda inactivo y sin acceso en vez de borrarse.</p>
+		<button class="boton boton--peligro boton--chico" name="accion" value="borrar" formnovalidate>Sí, borrar</button>
+	</details>
+	{% endif %}
+</form>
+{% endblock %}

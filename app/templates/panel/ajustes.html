@@ -1,0 +1,79 @@
+{% extends "panel/base.html" %}
+{% block titulo %}Ajustes{% endblock %}
+{% block contenido %}
+<div class="cabecera"><div><h1>Ajustes</h1><p class="cabecera__sub">Reglas de reserva, pagos, Google Meet y cómo poner la agenda en tu sitio.</p></div></div>
+<div class="dos">
+<form method="post" class="formulario">
+	{% include "panel/_csrf.html" %}
+	<section class="hoja formulario">
+		<h2>Reservas</h2>
+		<div class="rejilla-form">
+			<div class="campo"><label for="anticipacion_horas">Anticipación mínima (horas)</label><input id="anticipacion_horas" name="anticipacion_horas" type="number" min="0" max="720" value="{{ a.anticipacion_horas }}"><small>Nadie reserva una hora que empieza antes de este plazo.</small></div>
+			<div class="campo"><label for="dias_maximo">Reservar hasta (días)</label><input id="dias_maximo" name="dias_maximo" type="number" min="1" max="365" value="{{ a.dias_maximo }}"><small>Cuántos días hacia adelante.</small></div>
+			<div class="campo"><label for="intervalo">Las horas parten cada</label>
+				<select id="intervalo" name="intervalo">{% for v, t in [(0, 'Lo que dura el servicio'), (10, '10 minutos'), (15, '15 minutos'), (20, '20 minutos'), (30, '30 minutos'), (60, '60 minutos')] %}<option value="{{ v }}" {{ 'selected' if a.intervalo == v }}>{{ t }}</option>{% endfor %}</select></div>
+			<div class="campo"><label for="estado_inicial">Una reserva nueva queda</label>
+				<select id="estado_inicial" name="estado_inicial"><option value="confirmada" {{ 'selected' if a.estado_inicial == 'confirmada' }}>Confirmada</option><option value="pendiente" {{ 'selected' if a.estado_inicial == 'pendiente' }}>Pendiente (la confirmas tú)</option></select></div>
+			<div class="campo"><label for="horas_cancelar">Se puede cancelar hasta (horas antes)</label><input id="horas_cancelar" name="horas_cancelar" type="number" min="0" max="720" value="{{ a.horas_cancelar }}"></div>
+			<div class="campo"><label for="email_aviso">Avisar cada reserva a</label><input id="email_aviso" name="email_aviso" type="email" value="{{ a.email_aviso }}" placeholder="contacto@tunegocio.cl"></div>
+		</div>
+		<label class="check"><input type="checkbox" name="pedir_rut" value="1" {{ 'checked' if a.pedir_rut }}> Pedir RUT al reservar</label>
+		<div class="campo"><label for="mensaje_confirmacion">Mensaje al reservar</label><textarea id="mensaje_confirmacion" name="mensaje_confirmacion" rows="3">{{ a.mensaje_confirmacion }}</textarea><small>Sale en la pantalla final y en el correo. Buen lugar para la dirección o indicaciones.</small></div>
+		<div class="campo"><label for="color">Color de la página de reservas</label><input id="color" name="color" type="color" value="{{ a.color }}" style="width:64px;height:38px;padding:2px"></div>
+	</section>
+
+	<section class="hoja formulario">
+		<h2>Pago en línea · Mercado Pago</h2>
+		{% if not mp_listo %}<p class="aviso aviso--aviso">Falta poner <code>MP_ACCESS_TOKEN</code> en Render → Environment. Mientras tanto no se cobra en línea.</p>{% endif %}
+		<div class="campo"><label for="pago_modo">Cobro al reservar</label>
+			<select id="pago_modo" name="pago_modo">
+				<option value="ninguno" {{ 'selected' if a.pago_modo == 'ninguno' }}>No cobrar en línea (se paga en el lugar)</option>
+				<option value="opcional" {{ 'selected' if a.pago_modo == 'opcional' }}>El paciente elige si paga al reservar</option>
+				<option value="obligatorio" {{ 'selected' if a.pago_modo == 'obligatorio' }}>Obligatorio: la hora se confirma al pagar</option>
+			</select></div>
+		<div class="rejilla-form">
+			<div class="campo"><label for="pago_porcentaje">Cuánto se cobra (% del precio)</label><input id="pago_porcentaje" name="pago_porcentaje" type="number" min="1" max="100" value="{{ a.pago_porcentaje }}"><small>100 cobra el total; menos, un abono.</small></div>
+			<div class="campo"><label for="pago_minutos">Plazo para pagar (minutos)</label><input id="pago_minutos" name="pago_minutos" type="number" min="5" max="1440" value="{{ a.pago_minutos }}"><small>Con cobro obligatorio, la hora se guarda este tiempo.</small></div>
+		</div>
+		<p class="ayuda" style="margin:0">Mercado Pago avisa los pagos a <code>{{ url_aviso_mp }}</code> (se configura solo en cada cobro).</p>
+	</section>
+
+	<section class="hoja formulario">
+		<h2>Google Meet</h2>
+		<label class="check"><input type="checkbox" name="google_invitar" value="1" {{ 'checked' if a.google_invitar }}> Que Google le mande al paciente la invitación de calendario</label>
+	</section>
+	<div><button class="boton">Guardar ajustes</button></div>
+</form>
+
+<aside style="display:grid; gap:20px">
+	<section class="hoja">
+		<h2>Tu página de reservas</h2>
+		<div class="copiable"><input readonly value="{{ url_reservar }}" aria-label="Dirección de la página de reservas"><a class="boton boton--sec boton--chico" href="{{ url_reservar }}" target="_blank" rel="noopener">Abrir</a></div>
+		<p class="ayuda">Compártela en Instagram, WhatsApp o Google. Para ponerla dentro de una página de WordPress, agrega un bloque <strong>HTML personalizado</strong> con esto:</p>
+<pre class="codigo">&lt;iframe id="reservared" src="{{ url_reservar }}?embed=1"
+  style="width:100%;border:0;min-height:640px" title="Reservar hora"&gt;&lt;/iframe&gt;
+&lt;script&gt;
+window.addEventListener("message", function (e) {
+  if (e.data &amp;&amp; e.data.reservaredAlto)
+    document.getElementById("reservared").style.height = e.data.reservaredAlto + "px";
+});
+&lt;/script&gt;</pre>
+	</section>
+	<section class="hoja">
+		<h2>Conexión con Google</h2>
+		{% if not google_configurado %}
+			<p class="ayuda">Para crear un Meet por cada sesión online, pon <code>GOOGLE_CLIENT_ID</code> y <code>GOOGLE_CLIENT_SECRET</code> en Render. Al crearlos en Google Cloud, la dirección de vuelta autorizada es:</p>
+			<p><code>{{ url_volver_google }}</code></p>
+			<p class="ayuda">Mientras tanto, cada profesional puede tener una sala fija en su ficha.</p>
+		{% elif google_conectado %}
+			<p><span class="chip chip--confirmada">Conectado</span> {{ a.google_cuenta }}</p>
+			<p class="ayuda">Las citas online se crean en ese Google Calendar con su enlace de Meet, e invitan al profesional y al paciente.</p>
+			<form method="post" action="{{ url_for('panel.google_desconectar') }}">{% include "panel/_csrf.html" %}<button class="enlace-boton enlace-boton--peligro">Desconectar</button></form>
+		{% else %}
+			<p class="ayuda">Conecta la cuenta de Google del negocio. Ahí quedarán los eventos de las sesiones online.</p>
+			<form method="post" action="{{ url_for('panel.google_conectar') }}">{% include "panel/_csrf.html" %}<button class="boton">Conectar con Google</button></form>
+		{% endif %}
+	</section>
+</aside>
+</div>
+{% endblock %}

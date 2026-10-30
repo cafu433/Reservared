@@ -1,0 +1,11 @@
+{% extends "panel/base.html" %}
+{% block titulo %}Mi contraseña{% endblock %}
+{% block contenido %}
+<div class="cabecera"><div><h1>Mi contraseña</h1><p class="cabecera__sub">{{ current_user.email }}</p></div></div>
+<form method="post" class="hoja formulario" style="max-width:420px">
+	{% include "panel/_csrf.html" %}
+	<div class="campo"><label for="actual">Contraseña actual</label><input id="actual" name="actual" type="password" autocomplete="current-password" required></div>
+	<div class="campo"><label for="nueva">Contraseña nueva</label><input id="nueva" name="nueva" type="password" minlength="8" autocomplete="new-password" required><small>Al menos 8 caracteres.</small></div>
+	<div><button class="boton">Cambiar contraseña</button></div>
+</form>
+{% endblock %}

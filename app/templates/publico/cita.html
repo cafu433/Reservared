@@ -1,0 +1,43 @@
+{% extends "publico/base.html" %}
+{% block titulo %}Tu reserva{% endblock %}
+{% block subtitulo %}Tu reserva{% endblock %}
+{% block contenido %}
+<div class="ao-agenda">
+	{% if mensaje %}<p class="ao-aviso {{ 'ao-aviso--' ~ mensaje[0] if mensaje[0] }}" style="margin:0 0 14px">{{ mensaje[1] }}</p>{% endif %}
+	<div class="ao-ficha">
+		<p class="ao-eyebrow">Tu reserva</p>
+		<h1 class="ao-ficha__titulo">{{ c.servicio.nombre }}</h1>
+		<dl class="ao-datos">
+			<dt>Fecha</dt><dd>{{ c.inicio|fecha_larga }}</dd>
+			<dt>Con</dt><dd>{{ c.profesional.nombre }}{% if c.profesional.titulo %}, {{ c.profesional.titulo|lower }}{% endif %}</dd>
+			<dt>A nombre de</dt><dd>{{ c.nombre }}</dd>
+			<dt>Estado</dt><dd><span class="ao-estado ao-estado--{{ c.estado }}">{{ c.estado_texto }}</span></dd>
+			{% if c.estado_pago != 'sin_pago' %}<dt>Pago</dt><dd>{{ c.estado_pago_texto }}{% if c.monto %} · {{ c.monto|pesos }}{% endif %}</dd>{% endif %}
+			{% if c.servicio.online and c.estado != 'cancelada' %}
+				<dt>Sesión online</dt>
+				<dd>{% if c.enlace_sesion %}<span class="ao-sesion"><a class="ao-boton" href="{{ c.enlace_sesion }}" target="_blank" rel="noopener">Entrar a la sesión</a></span>{% else %}El enlace te llegará por correo antes de la hora.{% endif %}</dd>
+			{% endif %}
+		</dl>
+
+		{% if puede_pagar %}
+		<form method="post" class="ao-acciones">
+			<input type="hidden" name="accion" value="pagar">
+			<button class="ao-boton">Pagar {{ c.monto|pesos }} con Mercado Pago</button>
+			{% if c.expira %}<p class="ao-nota">La hora queda guardada hasta las {{ c.expira.strftime('%H:%M') }}. Si no se paga, se libera.</p>{% endif %}
+		</form>
+		{% endif %}
+
+		{% if puede_cancelar %}
+		<details class="ao-cancelar">
+			<summary>Cancelar mi hora</summary>
+			<form method="post">
+				<input type="hidden" name="accion" value="cancelar">
+				<p>El horario quedará libre para otra persona.{% if c.estado_pago == 'pagado' %} Te contactaremos para la devolución del pago.{% endif %}</p>
+				<button class="ao-boton ao-boton--peligro">Sí, cancelar la hora</button>
+			</form>
+		</details>
+		{% endif %}
+		<p><a href="{{ url_for('publico.reservar_pagina') }}">Reservar otra hora</a></p>
+	</div>
+</div>
+{% endblock %}

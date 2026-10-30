@@ -1,0 +1,104 @@
+{% extends "panel/base.html" %}
+{% block titulo %}{{ c.nombre }}{% endblock %}
+{% block contenido %}
+<div class="cabecera">
+	<div>
+		<h1>{{ c.nombre }}</h1>
+		<p class="cabecera__sub" style="text-transform:none">{{ c.inicio|fecha_larga }} · {{ c.servicio.nombre }} · {{ c.profesional.nombre }}</p>
+	</div>
+	<div class="acciones">
+		<span class="chip chip--{{ c.estado }}">{{ c.estado_texto }}</span>
+		<span class="chip chip--{{ c.estado_pago }}">{{ c.estado_pago_texto }}</span>
+	</div>
+</div>
+<div class="dos">
+	<div style="display:grid; gap:20px">
+		<section class="hoja">
+			<h2>Paciente</h2>
+			<dl class="datos">
+				{% if c.rut %}<dt>RUT</dt><dd>{{ c.rut }}</dd>{% endif %}
+				<dt>Correo</dt><dd><a href="mailto:{{ c.email }}">{{ c.email }}</a></dd>
+				{% if c.telefono %}<dt>Teléfono</dt><dd><a href="tel:{{ c.telefono|replace(' ', '') }}">{{ c.telefono }}</a>{% set wsp = c.telefono|replace(' ', '')|replace('+', '')|replace('-', '') %} · <a href="https://wa.me/{{ wsp }}" target="_blank" rel="noopener">WhatsApp</a></dd>{% endif %}
+				<dt>Hora</dt><dd class="num">{{ c.inicio.strftime('%H:%M') }}–{{ c.fin.strftime('%H:%M') }} ({{ c.servicio.duracion }} min)</dd>
+				{% if c.monto %}<dt>Monto</dt><dd class="num">{{ c.monto|pesos }}{% if c.pago_ref %} · Mercado Pago n.º {{ c.pago_ref }}{% endif %}</dd>{% endif %}
+				{% if c.notas %}<dt>Comentario</dt><dd>{{ c.notas }}</dd>{% endif %}
+				<dt>Reservó</dt><dd>{{ 'En la página de reservas' if c.origen == 'web' else 'Ingresada en el panel' }}, {{ c.creada.strftime('%d-%m-%Y %H:%M') }}</dd>
+			</dl>
+		</section>
+
+		{% if c.servicio.online %}
+		<section class="hoja">
+			<h2>Sesión online</h2>
+			{% if c.enlace_sesion %}
+				<div class="copiable"><input id="enlace-sesion" readonly value="{{ c.enlace_sesion }}" aria-label="Enlace de la sesión"><a class="boton" href="{{ c.enlace_sesion }}" target="_blank" rel="noopener">Entrar</a></div>
+			{% else %}
+				<p class="ayuda">{% if c.espera_pago %}El enlace se crea cuando se confirme el pago.{% else %}Esta cita todavía no tiene enlace.{% endif %}</p>
+			{% endif %}
+			<div class="acciones">
+				{% if google and c.estado != 'cancelada' %}
+				<form method="post">{% include "panel/_csrf.html" %}<input type="hidden" name="accion" value="crear_meet"><button class="boton boton--sec boton--chico">{{ 'Crear un Meet nuevo' if c.enlace_sesion else 'Crear Meet' }}</button></form>
+				{% endif %}
+			</div>
+			<details>
+				<summary class="ayuda">Poner otro enlace a mano (Zoom, Teams…)</summary>
+				<form method="post" class="copiable" style="margin-top:8px">{% include "panel/_csrf.html" %}<input type="hidden" name="accion" value="enlace"><input name="enlace_sesion" type="url" value="{{ c.enlace_sesion }}" placeholder="https://"><button class="boton boton--sec boton--chico">Guardar</button></form>
+			</details>
+		</section>
+		{% endif %}
+
+		<section class="hoja">
+			<h2>Nota interna</h2>
+			<p class="ayuda" style="margin-top:4px">Sólo la ve el equipo, nunca el paciente.</p>
+			<form method="post" class="formulario">{% include "panel/_csrf.html" %}<input type="hidden" name="accion" value="nota">
+				<textarea name="nota_interna" rows="4" aria-label="Nota interna">{{ c.nota_interna }}</textarea>
+				<div><button class="boton boton--sec boton--chico">Guardar nota</button></div>
+			</form>
+		</section>
+
+		{% if historial %}
+		<section>
+			<h2 style="margin-bottom:8px">Otras citas de este paciente</h2>
+			<div class="tabla-caja"><table><tbody>
+			{% for h in historial %}
+				<tr><td class="num"><a href="{{ url_for('panel.cita', cita_id=h.id) }}">{{ h.inicio.strftime('%d-%m-%Y %H:%M') }}</a></td><td>{{ h.servicio.nombre }}</td><td>{{ h.profesional.nombre }}</td><td><span class="chip chip--{{ h.estado }}">{{ h.estado_texto }}</span></td></tr>
+			{% endfor %}
+			</tbody></table></div>
+		</section>
+		{% endif %}
+	</div>
+
+	<aside style="display:grid; gap:20px">
+		<section class="hoja">
+			<h2>Estado</h2>
+			<form method="post" class="formulario">{% include "panel/_csrf.html" %}<input type="hidden" name="accion" value="estado">
+				<select name="estado" aria-label="Estado de la cita">{% for k, v in ESTADOS.items() %}<option value="{{ k }}" {{ 'selected' if c.estado == k }}>{{ v }}</option>{% endfor %}</select>
+				<label class="check"><input type="checkbox" name="avisar" value="1" checked> Avisar al paciente si queda confirmada o cancelada</label>
+				<div><button class="boton boton--chico">Cambiar estado</button></div>
+			</form>
+		</section>
+		<section class="hoja">
+			<h2>Pago</h2>
+			<p><span class="chip chip--{{ c.estado_pago }}">{{ c.estado_pago_texto }}</span></p>
+			{% if c.estado_pago != 'pagado' %}
+			<form method="post">{% include "panel/_csrf.html" %}<input type="hidden" name="accion" value="pagado"><button class="boton boton--sec boton--chico">Marcar como pagada</button></form>
+			<p class="ayuda">Por ejemplo, si pagó por transferencia o en el lugar.</p>
+			{% endif %}
+		</section>
+		<section class="hoja">
+			<h2>Enlace del paciente</h2>
+			<p class="ayuda" style="margin-top:4px">Ahí ve su hora, paga o cancela.</p>
+			<div class="copiable"><input readonly value="{{ enlace_paciente }}" aria-label="Enlace del paciente"></div>
+			<form method="post">{% include "panel/_csrf.html" %}<input type="hidden" name="accion" value="reenviar"><button class="enlace-boton">Reenviar la confirmación por correo</button></form>
+		</section>
+		<section class="hoja">
+			<details>
+				<summary class="enlace-boton enlace-boton--peligro">Borrar la cita</summary>
+				<form method="post" class="formulario" style="margin-top:10px">{% include "panel/_csrf.html" %}<input type="hidden" name="accion" value="borrar">
+					<p class="ayuda" style="margin:0">Se borra para siempre. Para que quede en el historial, mejor cámbiala a "Cancelada".</p>
+					<div><button class="boton boton--peligro boton--chico">Sí, borrar</button></div>
+				</form>
+			</details>
+		</section>
+	</aside>
+</div>
+{% endblock %}
