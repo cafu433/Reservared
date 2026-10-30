@@ -12,7 +12,7 @@
 				<td class="num">{{ b.fin.strftime('%d-%m-%Y %H:%M') }}</td>
 				<td>{{ b.profesional.nombre if b.profesional else 'Todo el equipo' }}</td>
 				<td>{{ b.motivo }}</td>
-				<td>{% if current_user.es_admin or b.profesional_id == current_user.profesional_id %}
+				<td>{% if current_user.ve_todo or b.profesional_id == current_user.profesional_id %}
 					<form method="post">{% include "panel/_csrf.html" %}<input type="hidden" name="accion" value="borrar"><input type="hidden" name="id" value="{{ b.id }}"><button class="enlace-boton enlace-boton--peligro">Quitar</button></form>
 				{% endif %}</td>
 			</tr>
@@ -24,7 +24,7 @@
 	<form method="post" class="hoja formulario">
 		{% include "panel/_csrf.html" %}
 		<h2>Nuevo bloqueo</h2>
-		{% if current_user.es_admin %}
+		{% if current_user.ve_todo %}
 		<div class="campo"><label for="profesional_id">Quién</label>
 			<select id="profesional_id" name="profesional_id"><option value="">Todo el equipo (feriado, cierre)</option>{% for p in visibles %}<option value="{{ p.id }}">{{ p.nombre }}</option>{% endfor %}</select></div>
 		{% endif %}

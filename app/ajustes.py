@@ -18,6 +18,7 @@ PREDETERMINADOS = {
     "mensaje_confirmacion": "Te esperamos. Si no puedes venir, cancela tu hora desde el enlace del correo.",
     "color": "#1f6f78",
     "pago_modo": "ninguno",  # ninguno | opcional | obligatorio
+    "pasarelas": ["webpay"],  # webpay y/o mercadopago
     "pago_porcentaje": 100,
     "pago_minutos": 20,
     "google_invitar": True,  # Google manda la invitación de calendario al paciente
@@ -49,8 +50,22 @@ def guardar(cambios):
     db.session.commit()
 
 
+def pasarelas():
+    """Medios de pago en línea habilitados y configurados."""
+    listas = []
+    for p in get("pasarelas") or []:
+        if p == "webpay":
+            from . import webpay
+
+            if webpay.disponible():
+                listas.append(p)
+        elif p == "mercadopago" and current_app.config["MP_ACCESS_TOKEN"]:
+            listas.append(p)
+    return listas
+
+
 def pagos_activos():
-    return get("pago_modo") != "ninguno" and bool(current_app.config["MP_ACCESS_TOKEN"])
+    return get("pago_modo") != "ninguno" and bool(pasarelas())
 
 
 def pago_obligatorio():

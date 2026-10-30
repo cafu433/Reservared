@@ -36,6 +36,21 @@ class Config:
     # Mercado Pago (Checkout Pro).
     MP_ACCESS_TOKEN = os.environ.get("MP_ACCESS_TOKEN", "")
 
+    # Webpay Plus (Transbank). Para probar sin código propio: WEBPAY_AMBIENTE=integracion.
+    WEBPAY_CODIGO_COMERCIO = os.environ.get("WEBPAY_CODIGO_COMERCIO", "")
+    WEBPAY_LLAVE_SECRETA = os.environ.get("WEBPAY_LLAVE_SECRETA", "")
+    WEBPAY_AMBIENTE = os.environ.get("WEBPAY_AMBIENTE", "produccion")  # produccion | integracion
+
+    # WhatsApp Business (API de Meta). Las plantillas deben estar aprobadas.
+    WHATSAPP_TOKEN = os.environ.get("WHATSAPP_TOKEN", "")
+    WHATSAPP_NUMERO_ID = os.environ.get("WHATSAPP_NUMERO_ID", "")
+    WHATSAPP_PLANTILLA_CONFIRMACION = os.environ.get("WHATSAPP_PLANTILLA_CONFIRMACION", "confirmacion_hora")
+    WHATSAPP_PLANTILLA_RECORDATORIO = os.environ.get("WHATSAPP_PLANTILLA_RECORDATORIO", "recordatorio_hora")
+    WHATSAPP_IDIOMA = os.environ.get("WHATSAPP_IDIOMA", "es")
+
+    # Clave para que el servicio de tareas programadas pida los recordatorios.
+    CLAVE_TAREAS = os.environ.get("CLAVE_TAREAS", "")
+
     # Google Calendar y Meet.
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
     GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
@@ -51,3 +66,7 @@ class ConfigPruebas(Config):
     GOOGLE_CLIENT_ID = "id-google"
     GOOGLE_CLIENT_SECRET = "secreto-google"
     ADMIN_EMAIL = ""
+    WEBPAY_AMBIENTE = "integracion"
+    WHATSAPP_TOKEN = "token-wa"
+    WHATSAPP_NUMERO_ID = "123"
+    CLAVE_TAREAS = "clave-tareas"

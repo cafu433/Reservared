@@ -40,6 +40,16 @@ services:
         sync: false
       - key: MP_ACCESS_TOKEN
         sync: false
+      - key: WEBPAY_CODIGO_COMERCIO
+        sync: false
+      - key: WEBPAY_LLAVE_SECRETA
+        sync: false
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: WHATSAPP_NUMERO_ID
+        sync: false
+      - key: CLAVE_TAREAS
+        generateValue: true
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET

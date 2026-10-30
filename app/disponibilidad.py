@@ -18,21 +18,55 @@ def filtro_ocupa():
     return db.and_(Cita.estado != "cancelada", or_(Cita.expira.is_(None), Cita.expira > ahora()))
 
 
-def calcular(servicio, profesionales, desde, hasta):
+def modalidad_de(servicio, pedida=None):
+    """La modalidad de la cita: la del servicio, o la que se pidió si el
+    servicio admite las dos."""
+    if servicio.modalidad != "ambas":
+        return servicio.modalidad
+    return pedida if pedida in ("presencial", "online") else None
+
+
+def tramo_sirve(h, modalidad, sucursal_id):
+    """El tramo tiene que admitir la modalidad (online, presencial o ambas).
+    Para lo presencial, además, la sucursal: un tramo sin sucursal sirve en
+    cualquiera."""
+    if not h.sirve_para(modalidad):
+        return False
+    return modalidad == "online" or not sucursal_id or h.sucursal_id in (None, sucursal_id)
+
+
+def sucursal_en(profesional, modalidad, inicio, fin, sucursal_id=None):
+    """La sucursal del tramo de horario donde cae la cita (None si es online)."""
+    if modalidad == "online":
+        return None
+    for h in profesional.horarios:
+        if (h.dia == inicio.weekday() and h.inicio <= inicio.time() and fin.time() <= h.fin
+                and tramo_sirve(h, modalidad, sucursal_id)):
+            return h.sucursal_id or sucursal_id
+    return sucursal_id
+
+
+def calcular(servicio, profesionales, desde, hasta, sucursal_id=None, equipo=False, modalidad=None, especialidad_id=None):
     """
     :param servicio: Servicio.
     :param profesionales: lista de Profesional.
     :param desde, hasta: date, ambos incluidos.
+    :param sucursal_id: sólo los tramos de esa sucursal.
+    :param equipo: True desde el panel: sin anticipación mínima ni tope de días.
+    :param modalidad: presencial | online (sólo cuenta si el servicio admite las dos).
+    :param especialidad_id: sólo profesionales con esa especialidad.
     :return: {date: {"HH:MM": [profesional_id, …]}}
     """
-    profesionales = [p for p in profesionales if p.atiende(servicio)]
+    profesionales = [p for p in profesionales if p.atiende(servicio)
+                     and (not especialidad_id or any(e.id == especialidad_id for e in p.especialidades))]
+    modalidad = modalidad_de(servicio, modalidad)
     if not profesionales or servicio is None:
         return {}
 
     aj = ajustes.todos()
     momento = ahora()
-    minimo = momento + timedelta(hours=max(0, int(aj["anticipacion_horas"])))
-    ultimo = momento.date() + timedelta(days=max(0, int(aj["dias_maximo"])))
+    minimo = momento if equipo else momento + timedelta(hours=max(0, int(aj["anticipacion_horas"])))
+    ultimo = hasta if equipo else momento.date() + timedelta(days=max(0, int(aj["dias_maximo"])))
     desde = max(desde, momento.date())
     hasta = min(hasta, ultimo)
     if desde > hasta:
@@ -68,7 +102,7 @@ def calcular(servicio, profesionales, desde, hasta):
         horas = {}
         for p in profesionales:
             for h in p.horarios:
-                if h.dia != dia.weekday():
+                if h.dia != dia.weekday() or not tramo_sirve(h, modalidad, sucursal_id):
                     continue
                 t = datetime.combine(dia, h.inicio)
                 fin_tramo = datetime.combine(dia, h.fin)

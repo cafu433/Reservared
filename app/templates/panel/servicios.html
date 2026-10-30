@@ -1,43 +1,42 @@
 {% extends "panel/base.html" %}
-{% block titulo %}Servicios{% endblock %}
+{% block titulo %}Servicios y precios{% endblock %}
 {% block contenido %}
-<div class="cabecera"><div><h1>Servicios</h1><p class="cabecera__sub">Lo que se puede reservar: duración, precio y si es presencial u online.</p></div></div>
+<div class="cabecera"><div><h1>Servicios y precios</h1><p class="cabecera__sub">Lo que se puede reservar: tipo, duración, modalidad y precio. Los precios especiales cambian el valor según modalidad, especialidad, profesional o sucursal.</p></div>
+	{% if s.id %}<a class="boton boton--sec" href="{{ url_for('panel.servicios') }}">Nuevo servicio</a>{% endif %}</div>
 <div class="dos">
 	<div class="tabla-caja"><table>
-		<thead><tr><th>Servicio</th><th>Duración</th><th>Precio</th><th>Modalidad</th><th></th></tr></thead>
+		<thead><tr><th>Servicio</th><th>Duración</th><th>Precio</th><th>Modalidad</th></tr></thead>
 		<tbody>
 		{% for x in lista %}
 			<tr class="{{ 'fila-cancelada' if not x.activo }}">
-				<td><strong>{{ x.nombre }}</strong>{% if x.descripcion %}<span class="sub">{{ x.descripcion }}</span>{% endif %}{% if not x.activo %}<span class="sub">Inactivo</span>{% endif %}</td>
+				<td><a href="{{ url_for('panel.servicios', servicio_id=x.id) }}"><strong>{{ x.nombre }}</strong></a><span class="sub">{{ x.categoria or 'Sin tipo' }}{{ ' · inactivo' if not x.activo }}</span></td>
 				<td class="num">{{ x.duracion }} min</td>
-				<td class="num">{{ x.precio|pesos if x.precio else '—' }}</td>
-				<td>{% if x.online %}<span class="chip chip--online">online</span>{% else %}presencial{% endif %}</td>
-				<td><a href="{{ url_for('panel.servicios', servicio_id=x.id) }}">Editar</a></td>
+				<td class="num">{{ x.precio|pesos if x.precio else 'Sin costo' }}{% if x.tarifas %}<span class="sub">+ {{ x.tarifas|length }} {{ 'precio especial' if x.tarifas|length == 1 else 'precios especiales' }}</span>{% endif %}</td>
+				<td>{% if x.modalidad == 'online' %}<span class="chip chip--online">online</span>{% elif x.modalidad == 'ambas' %}presencial y online{% else %}presencial{% endif %}</td>
 			</tr>
-		{% else %}
-			<tr><td colspan="5">Todavía no hay servicios. Crea el primero con el formulario.</td></tr>
-		{% endfor %}
+		{% else %}<tr><td colspan="4">Todavía no hay servicios. Crea el primero con el formulario.</td></tr>{% endfor %}
 		</tbody>
 	</table></div>
+	<div style="display:grid;gap:20px">
 	<form method="post" class="hoja formulario">
 		{% include "panel/_csrf.html" %}
 		<h2>{{ 'Editar servicio' if s.id else 'Nuevo servicio' }}</h2>
 		<div class="campo"><label for="nombre">Nombre</label><input id="nombre" name="nombre" required value="{{ s.nombre or '' }}" placeholder="Consulta psicológica"></div>
+		<div class="campo"><label for="categoria">Tipo de servicio <small>agrupa en la página de reservas</small></label><input id="categoria" name="categoria" list="categorias" value="{{ s.categoria or '' }}" placeholder="Psicología, Nutrición…">
+			<datalist id="categorias">{% for c in categorias %}<option value="{{ c }}">{% endfor %}</datalist></div>
 		<div class="campo"><label for="descripcion">Descripción <small>opcional, la ve el paciente</small></label><textarea id="descripcion" name="descripcion" rows="2">{{ s.descripcion or '' }}</textarea></div>
 		<div class="rejilla-form">
 			<div class="campo"><label for="duracion">Duración (minutos)</label><input id="duracion" name="duracion" type="number" min="5" max="600" step="5" required value="{{ s.duracion }}"></div>
-			<div class="campo"><label for="precio">Precio (pesos)</label><input id="precio" name="precio" type="number" min="0" step="1" value="{{ s.precio }}"></div>
+			<div class="campo"><label for="precio">Precio base (pesos)</label><input id="precio" name="precio" inputmode="numeric" value="{{ s.precio }}"></div>
 		</div>
 		<fieldset class="campo" style="border:0;padding:0;margin:0">
 			<legend style="font-weight:600;font-size:.9rem;margin-bottom:4px">Modalidad</legend>
-			<label class="check"><input type="radio" name="modalidad" value="presencial" {{ 'checked' if s.modalidad != 'online' }}> Presencial</label>
-			<label class="check"><input type="radio" name="modalidad" value="online" {{ 'checked' if s.modalidad == 'online' }}> Online (se crea un enlace de Meet por cita)</label>
+			<label class="check"><input type="radio" name="modalidad" value="presencial" {{ 'checked' if s.modalidad == 'presencial' }}> Presencial</label>
+			<label class="check"><input type="radio" name="modalidad" value="online" {{ 'checked' if s.modalidad == 'online' }}> Online (Meet por cita)</label>
+			<label class="check"><input type="radio" name="modalidad" value="ambas" {{ 'checked' if s.modalidad == 'ambas' }}> Presencial u online: el paciente elige</label>
 		</fieldset>
 		<label class="check"><input type="checkbox" name="activo" value="1" {{ 'checked' if s.activo }}> Se puede reservar</label>
-		<div class="acciones">
-			<button class="boton">Guardar</button>
-			{% if s.id %}<a href="{{ url_for('panel.servicios') }}">Nuevo servicio</a>{% endif %}
-		</div>
+		<div><button class="boton">Guardar</button></div>
 		{% if s.id %}
 		<details><summary class="enlace-boton enlace-boton--peligro">Borrar servicio</summary>
 			<p class="ayuda">Si ya tiene citas, queda inactivo en vez de borrarse.</p>
@@ -45,5 +44,31 @@
 		</details>
 		{% endif %}
 	</form>
+
+	{% if s.id %}
+	<section class="hoja formulario">
+		<h2>Precios especiales</h2>
+		<p class="ayuda" style="margin:0">Base: {{ s.precio|pesos }}. Si una cita calza con varias reglas, gana la que tiene más condiciones.</p>
+		{% if s.tarifas %}
+		<div class="tabla-caja"><table><tbody>
+		{% for t in s.tarifas|sort(attribute='precio') %}
+			<tr><td>{{ [t.modalidad|capitalize if t.modalidad, t.especialidad.nombre if t.especialidad, t.profesional.nombre if t.profesional, t.sucursal.nombre if t.sucursal]|select|join(' · ') }}</td>
+				<td class="num">{{ t.precio|pesos }}</td>
+				<td><form method="post">{% include "panel/_csrf.html" %}<input type="hidden" name="accion" value="borrar_tarifa"><input type="hidden" name="tarifa_id" value="{{ t.id }}"><button class="enlace-boton enlace-boton--peligro">Quitar</button></form></td></tr>
+		{% endfor %}
+		</tbody></table></div>
+		{% endif %}
+		<form method="post" class="rejilla-form">
+			{% include "panel/_csrf.html" %}<input type="hidden" name="accion" value="tarifa">
+			{% if s.modalidad == 'ambas' %}<div class="campo"><label for="t-mod">Modalidad</label><select id="t-mod" name="modalidad"><option value="">Cualquiera</option><option value="presencial">Presencial</option><option value="online">Online</option></select></div>{% endif %}
+			{% if especialidades %}<div class="campo"><label for="t-esp">Especialidad</label><select id="t-esp" name="especialidad_id"><option value="">Cualquiera</option>{% for e in especialidades %}<option value="{{ e.id }}">{{ e.nombre }}</option>{% endfor %}</select></div>{% endif %}
+			<div class="campo"><label for="t-prof">Profesional</label><select id="t-prof" name="profesional_id"><option value="">Cualquiera</option>{% for p in profesionales %}<option value="{{ p.id }}">{{ p.nombre }}</option>{% endfor %}</select></div>
+			{% if sucursales %}<div class="campo"><label for="t-suc">Sucursal</label><select id="t-suc" name="sucursal_id"><option value="">Cualquiera</option>{% for x in sucursales %}<option value="{{ x.id }}">{{ x.nombre }}</option>{% endfor %}</select></div>{% endif %}
+			<div class="campo"><label for="t-precio">Precio</label><input id="t-precio" name="precio" inputmode="numeric" required placeholder="30000"></div>
+			<div class="ancho"><button class="boton boton--sec boton--chico">Agregar precio especial</button></div>
+		</form>
+	</section>
+	{% endif %}
+	</div>
 </div>
 {% endblock %}

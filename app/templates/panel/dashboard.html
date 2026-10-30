@@ -1,0 +1,106 @@
+{% extends "panel/base.html" %}
+{% block titulo %}Dashboard{% endblock %}
+{% macro barras(filas, total, rojo=false) %}
+<ul class="barras-h {{ 'barras-h--rojo' if rojo }}">
+	{% for nombre, n in filas %}
+	<li><span>{{ nombre }}</span><span class="num">{{ n }}</span><span class="barra-h"><span style="width: {{ (100 * n / total)|round(1) if total else 0 }}%"></span></span></li>
+	{% else %}<li class="ayuda">Sin datos en el periodo.</li>{% endfor %}
+</ul>
+{% endmacro %}
+{% block contenido %}
+<div class="cabecera">
+	<div><h1>Dashboard</h1><p class="cabecera__sub">{{ titulo }} · {{ desde.strftime('%d-%m-%Y') }} al {{ hasta.strftime('%d-%m-%Y') }}</p></div>
+</div>
+<form method="get" class="filtros">
+	<div class="campo"><label for="periodo">Periodo</label>
+		<select id="periodo" name="periodo" onchange="this.form.submit()">{% for k, v in periodos.items() %}<option value="{{ k }}" {{ 'selected' if periodo == k }}>{{ v }}</option>{% endfor %}</select></div>
+	{% if periodo == 'rango' %}
+	<div class="campo"><label for="desde">Desde</label><input id="desde" type="date" name="desde" value="{{ desde.isoformat() }}"></div>
+	<div class="campo"><label for="hasta">Hasta</label><input id="hasta" type="date" name="hasta" value="{{ hasta.isoformat() }}"></div>
+	{% endif %}
+	{% if current_user.ve_todo and visibles|length > 1 %}
+	<div class="campo"><label for="profesional">Profesional</label>
+		<select id="profesional" name="profesional"><option value="">Todo el equipo</option>{% for p in visibles %}<option value="{{ p.id }}" {{ 'selected' if prof == p.id }}>{{ p.nombre }}</option>{% endfor %}</select></div>
+	{% endif %}
+	{% if sucursales|length > 1 %}
+	<div class="campo"><label for="sucursal">Sucursal</label>
+		<select id="sucursal" name="sucursal"><option value="">Todas</option>{% for s in sucursales %}<option value="{{ s.id }}" {{ 'selected' if suc == s.id }}>{{ s.nombre }}</option>{% endfor %}</select></div>
+	{% endif %}
+	{% if categorias %}
+	<div class="campo"><label for="categoria">Tipo de servicio</label>
+		<select id="categoria" name="categoria"><option value="">Todos</option>{% for c in categorias %}<option {{ 'selected' if categoria == c }}>{{ c }}</option>{% endfor %}</select></div>
+	{% endif %}
+	<button class="boton boton--sec">Ver</button>
+</form>
+
+<div class="kpis">
+	<div class="kpi"><span class="kpi__etiqueta">Citas</span><span class="kpi__valor">{{ r.activas }}</span><span class="kpi__nota">{{ r.pct_web if r.pct_web is not none else 0 }}% reservadas en línea</span></div>
+	<div class="kpi {{ 'kpi--bien' if (r.pct_asistencia or 0) >= 85 }}"><span class="kpi__etiqueta">Asistencia</span><span class="kpi__valor">{{ r.pct_asistencia ~ '%' if r.pct_asistencia is not none else '—' }}</span><span class="kpi__nota">{{ r.asistio }} atendidas{% if r.sin_marcar %} · {{ r.sin_marcar }} sin marcar{% endif %}</span></div>
+	<div class="kpi {{ 'kpi--alerta' if (r.pct_cancelacion or 0) >= 15 }}"><span class="kpi__etiqueta">Cancelaciones</span><span class="kpi__valor">{{ r.canceladas }}</span><span class="kpi__nota">{{ r.pct_cancelacion ~ '% del total' if r.pct_cancelacion is not none else 'sin citas' }}</span></div>
+	<div class="kpi {{ 'kpi--alerta' if (r.pct_inasistencia or 0) >= 10 }}"><span class="kpi__etiqueta">Inasistencias</span><span class="kpi__valor">{{ r.no_asistio }}</span><span class="kpi__nota">{{ r.pct_inasistencia ~ '% de las citas pasadas' if r.pct_inasistencia is not none else 'sin datos' }}</span></div>
+	<div class="kpi"><span class="kpi__etiqueta">Ocupación</span><span class="kpi__valor">{{ r.ocupacion ~ '%' if r.ocupacion is not none else '—' }}</span><span class="kpi__nota">de las horas de atención</span></div>
+	<div class="kpi"><span class="kpi__etiqueta">Cobrado</span><span class="kpi__valor">{{ r.cobrado|pesos }}</span><span class="kpi__nota">de {{ r.valor_atendido|pesos }} en atenciones</span></div>
+	<div class="kpi {{ 'kpi--alerta' if r.por_cobrar }}"><span class="kpi__etiqueta">Por cobrar</span><span class="kpi__valor">{{ r.por_cobrar|pesos }}</span><span class="kpi__nota">{% if current_user.puede('cobranza') %}<a href="{{ url_for('panel.cobranza') }}">ver cobranza</a>{% else %}de citas ya realizadas{% endif %}</span></div>
+	<div class="kpi"><span class="kpi__etiqueta">Pacientes</span><span class="kpi__valor">{{ r.pacientes }}</span><span class="kpi__nota">{{ r.pacientes_nuevos }} nuevos · {{ r.reagendadas }} citas reagendadas</span></div>
+</div>
+
+<section class="hoja" style="margin-bottom:20px">
+	<div class="cabecera" style="margin:0"><h2>Citas por día</h2>
+		<div class="leyenda-graf"><span><i style="background:var(--acento)"></i>Citas</span><span><i style="background:var(--ahora)"></i>Canceladas</span></div></div>
+	{% set n = r.serie|length %}
+	{% set ancho = 900 %}{% set alto = 180 %}{% set base = 160 %}
+	{% set paso = ancho / (n if n else 1) %}
+	<svg class="grafico" viewBox="0 0 {{ ancho }} {{ alto }}" role="img" aria-label="Citas y cancelaciones por día">
+		{% for f in [0.5, 1] %}<line x1="0" x2="{{ ancho }}" y1="{{ base - 140 * f }}" y2="{{ base - 140 * f }}" stroke="currentColor" stroke-opacity=".08"/>{% endfor %}
+		<line x1="0" x2="{{ ancho }}" y1="{{ base }}" y2="{{ base }}" stroke="currentColor" stroke-opacity=".2"/>
+		{% if maximo %}<text x="2" y="{{ base - 143 }}">{{ maximo }}</text>{% endif %}
+		{% for d in r.serie %}
+			{% set x = loop.index0 * paso %}
+			{% set h1 = (140 * d.citas / maximo) if maximo else 0 %}
+			{% set h2 = (140 * d.canceladas / maximo) if maximo else 0 %}
+			<rect x="{{ x + paso * 0.15 }}" y="{{ base - h1 }}" width="{{ paso * 0.7 }}" height="{{ h1 }}" rx="2" fill="var(--acento)"><title>{{ d.dia.strftime('%d-%m') }}: {{ d.citas }} citas</title></rect>
+			<rect x="{{ x + paso * 0.15 }}" y="{{ base - h1 - h2 }}" width="{{ paso * 0.7 }}" height="{{ h2 }}" rx="2" fill="var(--ahora)"><title>{{ d.dia.strftime('%d-%m') }}: {{ d.canceladas }} canceladas</title></rect>
+			{% if n <= 14 or d.dia.day in (1, 8, 15, 22) or loop.first %}<text x="{{ x + paso / 2 }}" y="{{ base + 15 }}" text-anchor="middle">{{ d.dia.day }}</text>{% endif %}
+		{% endfor %}
+	</svg>
+</section>
+
+<h2 style="margin-bottom:10px">Cancelaciones e inasistencias</h2>
+<div class="tres">
+	<section class="hoja"><h3>Quién canceló</h3>{{ barras(r.cancelo, r.canceladas, true) }}</section>
+	<section class="hoja"><h3>Con cuánta anticipación</h3>{{ barras(r.anticipacion, r.canceladas, true) }}</section>
+	<section class="hoja"><h3>Motivos</h3>{{ barras(r.motivos, r.canceladas, true) }}</section>
+</div>
+
+<h2 style="margin-bottom:10px">Por profesional</h2>
+<div class="tabla-caja" style="margin-bottom:20px"><table>
+	<thead><tr><th>Profesional</th><th>Citas</th><th>Atendidas</th><th>No asistió</th><th>Canceladas</th><th>Ocupación</th><th>Cobrado</th></tr></thead>
+	<tbody>
+	{% for f in r.por_prof %}
+		<tr>
+			<td><strong>{{ f.nombre }}</strong></td>
+			<td class="num">{{ f.citas }}</td><td class="num">{{ f.asistio }}</td><td class="num">{{ f.no_asistio }}</td><td class="num">{{ f.canceladas }}</td>
+			<td class="num">{% if f.ocupacion is not none %}<span style="display:flex;align-items:center;gap:8px">{{ f.ocupacion }}%<span class="medidor"><span style="width: {{ [f.ocupacion, 100]|min }}%"></span></span></span>{% else %}—{% endif %}</td>
+			<td class="num">{{ f.cobrado|pesos }}</td>
+		</tr>
+	{% else %}<tr><td colspan="7">Sin profesionales.</td></tr>{% endfor %}
+	</tbody>
+</table></div>
+
+<div class="tres">
+	<section class="hoja"><h3>Servicios más pedidos</h3>{{ barras(r.por_servicio, r.activas) }}</section>
+	<section class="hoja"><h3>Por tipo de servicio</h3>{{ barras(r.por_categoria, r.activas) }}</section>
+	<section class="hoja"><h3>Por sucursal</h3>{{ barras(r.por_sucursal, r.activas) }}</section>
+</div>
+
+<section class="hoja">
+	<h2>Próximas 24 horas</h2>
+	{% if proximas %}
+	<div class="tabla-caja"><table><tbody>
+		{% for c in proximas %}
+		<tr><td class="num"><a href="{{ url_for('panel.cita', cita_id=c.id) }}">{{ c.inicio.strftime('%d-%m %H:%M') }}</a></td><td>{{ c.nombre }}</td><td>{{ c.servicio.nombre }}{% if c.online %} <span class="chip chip--online">online</span>{% endif %}</td><td>{{ c.profesional.nombre }}</td><td><span class="chip chip--{{ c.estado }}">{{ c.estado_texto }}</span></td></tr>
+		{% endfor %}
+	</tbody></table></div>
+	{% else %}<p class="ayuda">No hay citas en las próximas 24 horas.</p>{% endif %}
+</section>
+{% endblock %}

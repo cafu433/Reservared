@@ -1,7 +1,7 @@
-"""Correos al paciente, al negocio y al profesional.
+"""Avisos al paciente (correo y WhatsApp), al negocio y al profesional.
 
-Se envían por SMTP en un hilo aparte para no demorar la página. Sin SMTP
-configurado, sólo quedan en el registro (log).
+Los correos salen por SMTP en un hilo aparte para no demorar la página. Sin
+SMTP configurado, sólo quedan en el registro (log).
 """
 import smtplib
 import threading
@@ -10,8 +10,8 @@ from email.utils import formataddr
 
 from flask import current_app, url_for
 
-from . import ajustes
-from .tiempo import fecha_larga, pesos
+from . import ajustes, whatsapp
+from .tiempo import ahora, fecha_larga, pesos
 
 
 def url_absoluta(endpoint, **valores):
@@ -60,18 +60,34 @@ def _negocio():
     return current_app.config["NOMBRE_NEGOCIO"]
 
 
+def _enlace(cita):
+    return url_absoluta("publico.cita", token=cita.token)
+
+
+def _lugar(cita):
+    if cita.online:
+        if cita.enlace_sesion:
+            return f"Sesión online: {cita.enlace_sesion}"
+        return "Sesión online: te enviaremos el enlace antes de la hora."
+    if cita.sucursal:
+        s = cita.sucursal
+        lugar = f"Lugar: {s.nombre}" + (f", {s.direccion}" if s.direccion else "")
+        if s.indicaciones:
+            lugar += f"\n{s.indicaciones}"
+        return lugar
+    return ""
+
+
 def _detalle(cita):
     lineas = [
         f"Servicio: {cita.servicio.nombre}",
         f"Con: {cita.profesional.nombre}",
         f"Fecha: {fecha_larga(cita.inicio)}",
     ]
-    if cita.enlace_sesion:
-        lineas.append(f"Sesión online: {cita.enlace_sesion}")
-    elif cita.servicio.online:
-        lineas.append("Sesión online: te enviaremos el enlace antes de la hora.")
+    if _lugar(cita):
+        lineas.append(_lugar(cita))
     if cita.estado_pago == "pagado":
-        lineas.append(f"Pagado: {pesos(cita.monto)}")
+        lineas.append(f"Pagado: {pesos(cita.pagado)}")
     return "\n".join(lineas)
 
 
@@ -79,7 +95,8 @@ def _paciente(cita):
     lineas = [f"Nombre: {cita.nombre}"]
     if cita.rut:
         lineas.append(f"RUT: {cita.rut}")
-    lineas.append(f"Correo: {cita.email}")
+    if cita.email:
+        lineas.append(f"Correo: {cita.email}")
     if cita.telefono:
         lineas.append(f"Teléfono: {cita.telefono}")
     if cita.notas:
@@ -88,52 +105,81 @@ def _paciente(cita):
 
 
 def _al_equipo(cita, asunto, intro):
-    enlace = url_absoluta("panel.cita", cita_id=cita.id)
     enviar(
         [ajustes.get("email_aviso"), cita.profesional.email],
         asunto,
-        f"{intro}\n\n{_detalle(cita)}\n\n{_paciente(cita)}\n\nVer en Reservared: {enlace}",
+        f"{intro}\n\n{_detalle(cita)}\n\n{_paciente(cita)}\n\nVer en Reservared: {url_absoluta('panel.cita', cita_id=cita.id)}",
     )
 
 
-def nueva_cita(cita):
-    """Hora reservada y confirmada (o sin pago pendiente): crea la sesión online
-    si corresponde y avisa a todos."""
+def _al_paciente(cita, asunto, intro, cierre=True):
+    cuerpo = f"Hola {cita.nombre},\n\n{intro}\n\n{_detalle(cita)}"
+    if cierre:
+        cuerpo += f"\n\n{ajustes.get('mensaje_confirmacion')}\n\nVer, reagendar o cancelar tu hora: {_enlace(cita)}"
+    enviar(cita.email, asunto, cuerpo + f"\n\n{_negocio()}")
+
+
+def nueva_cita(cita, avisar_equipo=True):
+    """Hora reservada: crea la sesión online si corresponde y avisa por correo
+    y WhatsApp."""
     from . import sesiones
 
     sesiones.asegurar(cita)
-    enlace = url_absoluta("publico.cita", token=cita.token)
-    enviar(
-        cita.email,
-        f"Tu hora en {_negocio()}: {fecha_larga(cita.inicio)}",
-        f"Hola {cita.nombre},\n\nTu hora quedó reservada.\n\n{_detalle(cita)}\n\n"
-        f"{ajustes.get('mensaje_confirmacion')}\n\nVer o cancelar tu hora: {enlace}\n\n{_negocio()}",
-    )
-    _al_equipo(cita, f"Nueva reserva: {cita.nombre}, {fecha_larga(cita.inicio)}", "Llegó una reserva nueva.")
+    _al_paciente(cita, f"Tu hora en {_negocio()}: {fecha_larga(cita.inicio)}", "Tu hora quedó reservada.")
+    whatsapp.confirmacion(cita, _enlace(cita))
+    if avisar_equipo:
+        _al_equipo(cita, f"Nueva reserva: {cita.nombre}, {fecha_larga(cita.inicio)}", "Llegó una reserva nueva.")
+
+
+def reagendada(cita):
+    from . import sesiones
+
+    sesiones.cancelar(cita)
+    sesiones.asegurar(cita)
+    _al_paciente(cita, f"Tu hora cambió: {fecha_larga(cita.inicio)}", "Tu hora quedó en un nuevo día u horario.")
+    whatsapp.confirmacion(cita, _enlace(cita))
+    _al_equipo(cita, f"Hora reagendada: {cita.nombre}, {fecha_larga(cita.inicio)}", "Se movió esta cita.")
+
+
+def recordatorio(cita):
+    _al_paciente(cita, f"Recordatorio: tu hora es {fecha_larga(cita.inicio)}", "Te recordamos tu hora.")
+    whatsapp.recordatorio(cita, _enlace(cita))
 
 
 def cancelada_por_paciente(cita):
+    motivo = f" Motivo: {cita.motivo_cancelacion}." if cita.motivo_cancelacion else ""
     _al_equipo(cita, f"Hora cancelada: {cita.nombre}, {fecha_larga(cita.inicio)}",
-               "El paciente canceló su hora. El horario quedó libre.")
+               f"El paciente canceló su hora. El horario quedó libre.{motivo}")
 
 
-def pago_tardio(cita):
+def cancelada_por_equipo(cita):
+    _al_paciente(cita, f"Tu hora fue cancelada — {_negocio()}",
+                 "Tu hora fue cancelada. Si quieres otra, puedes reservar de nuevo o escribirnos.", cierre=False)
+
+
+def confirmada(cita):
+    _al_paciente(cita, f"Tu hora está confirmada — {_negocio()}", "Tu hora está confirmada.")
+
+
+def pago_tardio(cita, monto):
     _al_equipo(
         cita,
         f"Pago recibido de una hora ya liberada: {cita.nombre}",
-        f"Mercado Pago confirmó el pago de {pesos(cita.monto)}, pero llegó después del plazo y la hora "
+        f"Mercado Pago confirmó el pago de {pesos(monto)}, pero llegó después del plazo y la hora "
         "ya se había liberado. Contacta al paciente para darle otra hora o devolver el pago.",
     )
 
 
-def estado_cambiado(cita):
-    if cita.estado == "confirmada":
-        asunto, texto = "Tu hora está confirmada", "Tu hora está confirmada."
-    elif cita.estado == "cancelada":
-        asunto, texto = "Tu hora fue cancelada", "Tu hora fue cancelada. Si quieres otra, puedes reservar de nuevo o escribirnos."
-    else:
-        return
-    enviar(cita.email, f"{asunto} — {_negocio()}", f"Hola {cita.nombre},\n\n{texto}\n\n{_detalle(cita)}\n\n{_negocio()}")
+def pago_recibido(cita, monto):
+    _al_paciente(cita, f"Recibimos tu pago — {_negocio()}", f"Recibimos tu pago de {pesos(monto)}. Gracias.", cierre=False)
+
+
+def cobro(cita, enlace_pago=""):
+    """Recordatorio de saldo pendiente."""
+    texto = f"Queda un saldo de {pesos(cita.saldo)} de tu atención."
+    if enlace_pago:
+        texto += f"\n\nPuedes pagarlo en línea aquí: {enlace_pago}"
+    _al_paciente(cita, f"Saldo pendiente — {_negocio()}", texto, cierre=False)
 
 
 def restablecer_clave(usuario, enlace):
@@ -143,3 +189,17 @@ def restablecer_clave(usuario, enlace):
         f"Hola {usuario.nombre},\n\nPara elegir una contraseña nueva abre este enlace (vale por una hora):\n\n{enlace}\n\n"
         "Si no lo pediste, ignora este correo.",
     )
+
+
+def acceso_nuevo(usuario, enlace):
+    enviar(
+        usuario.email,
+        f"Tu acceso a Reservared — {_negocio()}",
+        f"Hola {usuario.nombre},\n\nYa tienes acceso a Reservared de {_negocio()}.\n\n"
+        f"Elige tu contraseña aquí (el enlace vale una hora):\n{enlace}\n\n"
+        f"Después entras en: {url_absoluta('panel.entrar')}\nTu usuario es: {usuario.email}",
+    )
+
+
+def marcar_recordatorio(cita):
+    cita.recordatorio_enviado = ahora()

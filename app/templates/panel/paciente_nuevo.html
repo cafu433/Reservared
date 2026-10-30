@@ -1,0 +1,10 @@
+{% extends "panel/base.html" %}
+{% block titulo %}Nuevo paciente{% endblock %}
+{% block contenido %}
+<div class="cabecera"><div><h1>Nuevo paciente</h1></div></div>
+<form method="post" class="hoja formulario" style="max-width:900px">
+	{% include "panel/_csrf.html" %}
+	{% include "panel/_paciente_datos.html" %}
+	<div class="acciones"><button class="boton">Guardar</button><a href="{{ url_for('panel.pacientes') }}">Volver</a></div>
+</form>
+{% endblock %}

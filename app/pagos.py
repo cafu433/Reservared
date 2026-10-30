@@ -9,9 +9,9 @@ import re
 import requests
 from flask import current_app
 
-from . import ajustes, correos
+from . import ajustes, cobros, correos
 from .extensions import db
-from .models import Cita
+from .models import Cita, Pago
 from .reservas import _candado
 from .disponibilidad import filtro_ocupa
 from .tiempo import ahora, con_zona, fecha_larga
@@ -48,21 +48,28 @@ def _pedir(metodo, ruta, json=None):
     return r.json()
 
 
-def url_de_pago(cita):
-    """Crea el cobro y devuelve la dirección a la que se envía al paciente."""
-    if not ajustes.pagos_activos():
+def url_de_pago(cita, monto=None):
+    """Crea el cobro y devuelve la dirección a la que se envía al paciente.
+    Sin monto, cobra lo definido al reservar; con monto (cobranza), ese saldo."""
+    if not current_app.config["MP_ACCESS_TOKEN"]:
         raise PagoError("El pago en línea no está activado.")
-    if cita.estado_pago == "pagado":
+    if monto is None and not ajustes.pagos_activos():
+        raise PagoError("El pago en línea no está activado.")
+    if cita.estado_pago in ("pagado", "sin_costo"):
         raise PagoError("Esta hora ya está pagada.")
     if cita.estado == "cancelada" or (cita.expira and cita.expira < ahora()):
         raise PagoError("El plazo para pagar terminó y la hora se liberó. Reserva de nuevo.")
 
-    if cita.monto <= 0:
-        cita.monto = ajustes.monto_a_pagar(cita.servicio.precio)
-        if cita.monto <= 0:
-            raise PagoError("Este servicio no tiene precio.")
-        cita.estado_pago = "pendiente"
+    if monto is not None:
+        cita.monto = min(int(monto), cita.saldo)
         db.session.commit()
+    elif cita.monto <= 0:
+        cita.monto = min(ajustes.monto_a_pagar(cita.precio), cita.saldo)
+        if cita.estado_pago == "por_cobrar":
+            cita.estado_pago = "pendiente"
+        db.session.commit()
+    if cita.monto <= 0:
+        raise PagoError("No queda nada por pagar.")
 
     volver = correos.url_absoluta("publico.cita", token=cita.token)
     preferencia = {
@@ -92,10 +99,10 @@ def url_de_pago(cita):
 
 
 def verificar(pago_id, cita_esperada=None):
-    """Consulta un pago y, si está aprobado y corresponde, marca la cita pagada.
-    Devuelve la cita (pagada o no) o None si el pago no es de una cita."""
+    """Consulta un pago y, si está aprobado y corresponde, lo registra en la
+    cita. Devuelve la cita o None si el pago no es de una cita."""
     pago_id = str(pago_id or "")
-    if not ajustes.pagos_activos() or not pago_id.isdigit():
+    if not current_app.config["MP_ACCESS_TOKEN"] or not pago_id.isdigit():
         return None
     pago = _pedir("GET", f"/v1/payments/{pago_id}")
     if pago.get("status") != "approved":
@@ -109,10 +116,11 @@ def verificar(pago_id, cita_esperada=None):
     if not cita or (cita_esperada is not None and cita.id != cita_esperada.id):
         db.session.rollback()
         return None
-    if cita.estado_pago == "pagado":
+    if Pago.query.filter_by(medio="mercadopago", referencia=pago_id).first():
         db.session.rollback()
-        return cita
-    if pago.get("currency_id") != "CLP" or round(float(pago.get("transaction_amount") or 0)) < cita.monto:
+        return cita  # Ya registrado: el aviso llegó dos veces.
+    monto = round(float(pago.get("transaction_amount") or 0))
+    if pago.get("currency_id") != "CLP" or monto < cita.monto or monto <= 0:
         db.session.rollback()
         return None
 
@@ -125,18 +133,26 @@ def verificar(pago_id, cita_esperada=None):
             Cita.inicio < cita.fin, Cita.fin > cita.inicio, filtro_ocupa(),
         ).first() is not None
 
-    cita.estado_pago = "pagado"
-    cita.pago_ref = pago_id
-    cita.monto = round(float(pago["transaction_amount"]))
+    if esperaba_pago and cita.estado_pago == "pendiente":
+        cita.estado_pago = "por_cobrar"
+    cita.monto = 0
+    db.session.add(Pago(cita=cita, paciente_id=cita.paciente_id, profesional_id=cita.profesional_id, monto=monto,
+                        medio="mercadopago", fecha=ahora().date(), referencia=pago_id, nota="Pago en línea"))
+    db.session.flush()
+    db.session.refresh(cita)
+    cobros.recalcular(cita)
     cita.expira = None
     if liberada:
-        cita.estado = "cancelada"
+        if cita.estado != "cancelada":
+            cita.cancelar("sistema", "El pago llegó después del plazo")
     elif cita.estado == "pendiente":
         cita.estado = "confirmada"
     db.session.commit()
 
     if liberada:
-        correos.pago_tardio(cita)
+        correos.pago_tardio(cita, monto)
     elif esperaba_pago:
         correos.nueva_cita(cita)
+    else:
+        correos.pago_recibido(cita, monto)
     return cita

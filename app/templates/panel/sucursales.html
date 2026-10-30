@@ -1,0 +1,26 @@
+{% extends "panel/base.html" %}
+{% block titulo %}Sucursales{% endblock %}
+{% block contenido %}
+<div class="cabecera"><div><h1>Sucursales</h1><p class="cabecera__sub">Dónde se atiende presencial. En el horario de cada profesional eliges la sucursal de cada tramo.</p></div>
+	{% if s.id %}<a class="boton boton--sec" href="{{ url_for('panel.sucursales_pagina') }}">Nueva sucursal</a>{% endif %}</div>
+<div class="dos">
+	<div class="tabla-caja"><table>
+		<thead><tr><th>Sucursal</th><th>Dirección</th><th>Teléfono</th></tr></thead>
+		<tbody>
+		{% for x in lista %}
+			<tr class="{{ 'fila-cancelada' if not x.activa }}"><td><a href="{{ url_for('panel.sucursales_pagina', sucursal_id=x.id) }}"><strong>{{ x.nombre }}</strong></a>{% if not x.activa %}<span class="sub">Inactiva</span>{% endif %}</td><td>{{ x.direccion }}</td><td>{{ x.telefono }}</td></tr>
+		{% else %}<tr><td colspan="3">Sin sucursales. Si atiendes en un solo lugar, no hace falta crearlas.</td></tr>{% endfor %}
+		</tbody>
+	</table></div>
+	<form method="post" class="hoja formulario">
+		{% include "panel/_csrf.html" %}
+		<h2>{{ 'Editar sucursal' if s.id else 'Nueva sucursal' }}</h2>
+		<div class="campo"><label for="nombre">Nombre</label><input id="nombre" name="nombre" required value="{{ s.nombre or '' }}" placeholder="Providencia"></div>
+		<div class="campo"><label for="direccion">Dirección</label><input id="direccion" name="direccion" value="{{ s.direccion or '' }}" placeholder="Av. Providencia 1234, of. 302"></div>
+		<div class="campo"><label for="telefono">Teléfono</label><input id="telefono" name="telefono" value="{{ s.telefono or '' }}"></div>
+		<div class="campo"><label for="indicaciones">Indicaciones <small>salen en el correo de confirmación</small></label><textarea id="indicaciones" name="indicaciones" rows="2" placeholder="Estacionamiento en el subterráneo. Toca el timbre 302.">{{ s.indicaciones or '' }}</textarea></div>
+		<label class="check"><input type="checkbox" name="activa" value="1" {{ 'checked' if s.activa }}> Activa</label>
+		<div><button class="boton">Guardar</button></div>
+	</form>
+</div>
+{% endblock %}

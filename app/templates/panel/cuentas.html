@@ -1,0 +1,21 @@
+{% extends "panel/base.html" %}
+{% block titulo %}Cuentas y permisos{% endblock %}
+{% block contenido %}
+<div class="cabecera">
+	<div><h1>Cuentas y permisos</h1><p class="cabecera__sub">Quién entra al panel y qué módulos puede usar.</p></div>
+	<a class="boton" href="{{ url_for('panel.cuenta_editar') }}">Crear cuenta</a>
+</div>
+<div class="tabla-caja"><table>
+	<thead><tr><th>Nombre</th><th>Perfil</th><th>Puede usar</th><th>Ve</th></tr></thead>
+	<tbody>
+	{% for u in lista %}
+		<tr class="{{ 'fila-cancelada' if not u.activo }}">
+			<td><a href="{{ url_for('panel.cuenta_editar', usuario_id=u.id) }}"><strong>{{ u.nombre }}</strong></a><span class="sub">{{ u.email }}{% if not u.activo %} · sin acceso{% endif %}</span></td>
+			<td>{{ PERFILES[u.rol][0] if u.rol in PERFILES else u.rol }}{% if u.profesional %}<span class="sub">Profesional: {{ u.profesional.nombre }}</span>{% endif %}</td>
+			<td>{% if u.es_admin %}Todo{% if 'ficha_clinica' in u.lista_permisos %}, con ficha clínica{% endif %}{% else %}{% set nombres = [] %}{% for k in PERMISOS if k in u.lista_permisos and k != 'todo_el_equipo' %}{% set _ = nombres.append(PERMISOS[k][0]) %}{% endfor %}{{ nombres|join(', ') or '—' }}{% endif %}</td>
+			<td>{{ 'Todo el equipo' if u.ve_todo else 'Sólo lo suyo' }}</td>
+		</tr>
+	{% endfor %}
+	</tbody>
+</table></div>
+{% endblock %}

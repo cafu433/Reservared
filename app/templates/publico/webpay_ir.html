@@ -1,0 +1,17 @@
+{% extends "publico/base.html" %}
+{% block titulo %}Ir a pagar{% endblock %}
+{% block subtitulo %}Pago con Webpay{% endblock %}
+{% block contenido %}
+<div class="ao-agenda">
+	<div class="ao-ficha">
+		<p class="ao-eyebrow">Pago</p>
+		<h1 class="ao-ficha__titulo">Te llevamos a Webpay para pagar {{ monto|pesos }}</h1>
+		{% if pruebas %}<p class="ao-aviso">Ambiente de pruebas de Transbank: no se cobra de verdad.</p>{% endif %}
+		<form id="ir-webpay" method="post" action="{{ url }}">
+			<input type="hidden" name="token_ws" value="{{ token_ws }}">
+			<button class="ao-boton">Ir a Webpay</button>
+		</form>
+	</div>
+</div>
+{% endblock %}
+{% block scripts %}<script>document.getElementById('ir-webpay').submit();</script>{% endblock %}

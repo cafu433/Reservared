@@ -1,0 +1,88 @@
+{% extends "panel/base.html" %}
+{% block titulo %}{{ p.nombre }}{% endblock %}
+{% block contenido %}
+<div class="cabecera">
+	<div>
+		<h1>{{ p.nombre }}</h1>
+		<p class="cabecera__sub">{{ p.rut or 'Sin RUT' }}{% if p.edad is not none %} · {{ p.edad }} años{% endif %}{% if p.prevision %} · {{ p.prevision }}{% endif %} · paciente desde {{ p.creado.strftime('%m-%Y') }}</p>
+	</div>
+	{% if current_user.puede('agendar') %}<a class="boton" href="{{ url_for('panel.agendar', paciente=p.id) }}">Agendar</a>{% endif %}
+</div>
+
+<div class="kpis">
+	<div class="kpi"><span class="kpi__etiqueta">Atenciones</span><span class="kpi__valor">{{ resumen.atendidas }}</span></div>
+	<div class="kpi"><span class="kpi__etiqueta">Próximas</span><span class="kpi__valor">{{ proximas|length }}</span><span class="kpi__nota">{{ proximas[0].inicio.strftime('%d-%m %H:%M') if proximas else 'sin hora' }}</span></div>
+	<div class="kpi {{ 'kpi--alerta' if resumen.inasistencias }}"><span class="kpi__etiqueta">Inasistencias</span><span class="kpi__valor">{{ resumen.inasistencias }}</span><span class="kpi__nota">{{ resumen.canceladas }} canceladas</span></div>
+	{% if current_user.puede('cobranza') %}
+	<div class="kpi {{ 'kpi--alerta' if resumen.saldo }}"><span class="kpi__etiqueta">Saldo</span><span class="kpi__valor">{{ resumen.saldo|pesos }}</span><span class="kpi__nota">pagado {{ resumen.pagado|pesos }}</span></div>
+	{% endif %}
+</div>
+
+<div class="dos">
+	<div style="display:grid; gap:20px">
+		<section>
+			<h2 style="margin-bottom:8px">Citas</h2>
+			{% if not proximas and not pasadas %}<p class="vacio">Sin citas todavía.</p>{% else %}
+			<div class="tabla-caja"><table>
+				<thead><tr><th>Fecha</th><th>Servicio</th><th>Profesional</th><th>Estado</th>{% if current_user.puede('cobranza') %}<th>Pago</th>{% endif %}</tr></thead>
+				<tbody>
+				{% for c in proximas + pasadas %}
+					<tr class="{{ 'fila-cancelada' if c.estado == 'cancelada' }}">
+						<td class="num"><a href="{{ url_for('panel.cita', cita_id=c.id) }}">{{ c.inicio.strftime('%d-%m-%Y %H:%M') }}</a></td>
+						<td>{{ c.servicio.nombre }}{% if c.online %} <span class="chip chip--online">online</span>{% endif %}</td>
+						<td>{{ c.profesional.nombre }}</td>
+						<td><span class="chip chip--{{ c.estado }}">{{ c.estado_texto }}</span></td>
+						{% if current_user.puede('cobranza') %}<td><span class="chip chip--{{ c.estado_pago }}">{{ c.estado_pago_texto }}</span>{% if c.saldo and c.estado != 'cancelada' %}<span class="sub num">saldo {{ c.saldo|pesos }}</span>{% endif %}</td>{% endif %}
+					</tr>
+				{% endfor %}
+				</tbody>
+			</table></div>
+			{% endif %}
+		</section>
+
+		{% if current_user.puede('ficha_clinica') %}
+		<section class="hoja" id="clinica">
+			<div class="cabecera" style="margin:0"><h2>Ficha clínica</h2><span class="confidencial">Confidencial</span></div>
+			<form method="post" class="formulario">{% include "panel/_csrf.html" %}<input type="hidden" name="accion" value="clinica">
+				<div class="campo"><label for="motivo_consulta">Motivo de consulta</label><textarea id="motivo_consulta" name="motivo_consulta" rows="3">{{ p.motivo_consulta }}</textarea></div>
+				<div class="campo"><label for="antecedentes">Antecedentes</label><textarea id="antecedentes" name="antecedentes" rows="4" placeholder="Antecedentes médicos, psicológicos, familiares, fármacos…">{{ p.antecedentes }}</textarea></div>
+				<div><button class="boton boton--sec boton--chico">Guardar</button></div>
+			</form>
+			<h3 style="margin-top:18px">Evolución</h3>
+			<form method="post" class="formulario">{% include "panel/_csrf.html" %}<input type="hidden" name="accion" value="evolucion">
+				<textarea name="texto" rows="3" aria-label="Nueva nota de evolución" placeholder="Nueva nota de evolución…"></textarea>
+				<div><button class="boton boton--chico">Agregar nota</button></div>
+			</form>
+			{% for ev in evoluciones %}
+				<div class="evolucion">
+					<span class="sub">{{ ev.fecha.strftime('%d-%m-%Y %H:%M') }} · {{ ev.autor.nombre if ev.autor else '—' }}{% if ev.cita %} · <a href="{{ url_for('panel.cita', cita_id=ev.cita_id) }}">{{ ev.cita.servicio.nombre }}</a>{% endif %}{% if ev.editada %} · editada{% endif %}</span>
+					{% if ev.autor_id == current_user.id %}
+					<details><summary><p style="display:inline">{{ ev.texto }}</p></summary>
+						<form method="post" class="formulario" style="margin-top:8px">{% include "panel/_csrf.html" %}<input type="hidden" name="accion" value="editar_evolucion"><input type="hidden" name="evolucion_id" value="{{ ev.id }}">
+							<textarea name="texto" rows="4" aria-label="Editar nota">{{ ev.texto }}</textarea><div><button class="boton boton--sec boton--chico">Guardar cambios</button></div></form>
+					</details>
+					{% else %}<p>{{ ev.texto }}</p>{% endif %}
+				</div>
+			{% else %}<p class="ayuda">Todavía no hay notas de evolución.</p>{% endfor %}
+		</section>
+		{% endif %}
+	</div>
+
+	<aside style="display:grid; gap:20px">
+		<form method="post" class="hoja formulario">
+			{% include "panel/_csrf.html" %}<input type="hidden" name="accion" value="datos">
+			<h2>Datos</h2>
+			{% include "panel/_paciente_datos.html" %}
+			<div><button class="boton boton--chico">Guardar datos</button></div>
+		</form>
+		{% if current_user.puede('cobranza') and pagos %}
+		<section class="hoja">
+			<h2>Pagos</h2>
+			<div class="tabla-caja"><table><tbody>
+				{% for pg in pagos %}<tr><td class="num">{{ pg.fecha.strftime('%d-%m-%Y') }}</td><td>{{ pg.medio_texto }}</td><td class="num">{{ pg.monto|pesos }}</td></tr>{% endfor %}
+			</tbody></table></div>
+		</section>
+		{% endif %}
+	</aside>
+</div>
+{% endblock %}

@@ -23,19 +23,33 @@
 	</section>
 
 	<section class="hoja formulario">
-		<h2>Pago en línea · Mercado Pago</h2>
-		{% if not mp_listo %}<p class="aviso aviso--aviso">Falta poner <code>MP_ACCESS_TOKEN</code> en Render → Environment. Mientras tanto no se cobra en línea.</p>{% endif %}
+		<h2>Pago en línea</h2>
 		<div class="campo"><label for="pago_modo">Cobro al reservar</label>
 			<select id="pago_modo" name="pago_modo">
-				<option value="ninguno" {{ 'selected' if a.pago_modo == 'ninguno' }}>No cobrar en línea (se paga en el lugar)</option>
+				<option value="ninguno" {{ 'selected' if a.pago_modo == 'ninguno' }}>No cobrar al reservar (se paga después o en el lugar)</option>
 				<option value="opcional" {{ 'selected' if a.pago_modo == 'opcional' }}>El paciente elige si paga al reservar</option>
 				<option value="obligatorio" {{ 'selected' if a.pago_modo == 'obligatorio' }}>Obligatorio: la hora se confirma al pagar</option>
 			</select></div>
+		<fieldset class="campo" style="border:0;padding:0;margin:0">
+			<legend style="font-weight:600;font-size:.9rem;margin-bottom:4px">Medios de pago</legend>
+			<label class="check"><input type="checkbox" name="pasarelas" value="webpay" {{ 'checked' if 'webpay' in a.pasarelas }}> Webpay (Transbank)
+				{% if not webpay_listo %}<span class="chip chip--pendiente">falta el código de comercio</span>{% elif webpay_pruebas %}<span class="chip chip--pendiente">modo de pruebas</span>{% else %}<span class="chip chip--confirmada">listo</span>{% endif %}</label>
+			<label class="check"><input type="checkbox" name="pasarelas" value="mercadopago" {{ 'checked' if 'mercadopago' in a.pasarelas }}> Mercado Pago
+				{% if not mp_listo %}<span class="chip chip--pendiente">falta MP_ACCESS_TOKEN</span>{% else %}<span class="chip chip--confirmada">listo</span>{% endif %}</label>
+			<small>Con los dos marcados, el paciente elige. Los datos de cada uno se ponen en Render → Environment.</small>
+		</fieldset>
 		<div class="rejilla-form">
-			<div class="campo"><label for="pago_porcentaje">Cuánto se cobra (% del precio)</label><input id="pago_porcentaje" name="pago_porcentaje" type="number" min="1" max="100" value="{{ a.pago_porcentaje }}"><small>100 cobra el total; menos, un abono.</small></div>
+			<div class="campo"><label for="pago_porcentaje">Cuánto se cobra al reservar (%)</label><input id="pago_porcentaje" name="pago_porcentaje" type="number" min="1" max="100" value="{{ a.pago_porcentaje }}"><small>100 cobra el total; menos, un abono.</small></div>
 			<div class="campo"><label for="pago_minutos">Plazo para pagar (minutos)</label><input id="pago_minutos" name="pago_minutos" type="number" min="5" max="1440" value="{{ a.pago_minutos }}"><small>Con cobro obligatorio, la hora se guarda este tiempo.</small></div>
 		</div>
-		<p class="ayuda" style="margin:0">Mercado Pago avisa los pagos a <code>{{ url_aviso_mp }}</code> (se configura solo en cada cobro).</p>
+		<p class="ayuda" style="margin:0">Los saldos que quedan se cobran desde Cobranza: el recordatorio lleva el enlace para pagar en línea.</p>
+	</section>
+
+	<section class="hoja formulario">
+		<h2>Avisos automáticos</h2>
+		<p style="margin:0">Correo: {% if config.SMTP_HOST %}<span class="chip chip--confirmada">listo</span>{% else %}<span class="chip chip--pendiente">falta configurar SMTP</span>{% endif %}</p>
+		<p style="margin:0">WhatsApp: {% if whatsapp_listo %}<span class="chip chip--confirmada">listo</span>{% else %}<span class="chip chip--pendiente">sin conectar</span> <span class="ayuda">Mientras tanto, en cada cita hay un botón para enviarlo desde tu WhatsApp.</span>{% endif %}</p>
+		<p style="margin:0">Recordatorio del día antes: {% if recordatorios_listos %}<span class="chip chip--confirmada">listo</span> <span class="ayuda">La tarea programada debe llamar a <code>{{ url_tareas }}?clave=…</code> cada hora.</span>{% else %}<span class="chip chip--pendiente">falta CLAVE_TAREAS</span>{% endif %}</p>
 	</section>
 
 	<section class="hoja formulario">

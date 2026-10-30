@@ -1,0 +1,44 @@
+{% extends "panel/base.html" %}
+{% block titulo %}{{ u.nombre or 'Nueva cuenta' }}{% endblock %}
+{% block contenido %}
+<div class="cabecera"><div><h1>{{ u.nombre or 'Nueva cuenta' }}</h1>{% if u.email %}<p class="cabecera__sub">{{ u.email }}</p>{% endif %}</div></div>
+<form method="post" class="formulario" style="max-width:820px">
+	{% include "panel/_csrf.html" %}
+	<section class="hoja formulario">
+		<div class="rejilla-form">
+			<div class="campo"><label for="nombre">Nombre</label><input id="nombre" name="nombre" required value="{{ u.nombre or '' }}"></div>
+			<div class="campo"><label for="email">Correo (usuario)</label><input id="email" name="email" type="email" required value="{{ u.email or '' }}"></div>
+			<div class="campo"><label for="profesional_id">Es el perfil de</label>
+				<select id="profesional_id" name="profesional_id"><option value="">Nadie: no atiende pacientes</option>{% for p in profesionales %}<option value="{{ p.id }}" {{ 'selected' if u.profesional_id == p.id }}>{{ p.nombre }}</option>{% endfor %}</select></div>
+			<div class="campo"><label for="rol">Perfil</label>
+				<select id="rol" name="rol">{% for k, v in PERFILES.items() %}{% if k != 'admin' or current_user.es_admin %}<option value="{{ k }}" data-permisos="{{ v[1]|join(',') }}" {{ 'selected' if u.rol == k }}>{{ v[0] }}</option>{% endif %}{% endfor %}</select>
+				<small>Elegir un perfil marca sus permisos; después puedes cambiarlos uno por uno.</small></div>
+		</div>
+		<label class="check"><input type="checkbox" name="activo" value="1" {{ 'checked' if u.activo }}> Puede entrar</label>
+	</section>
+	<section class="hoja formulario">
+		<h2>Permisos</h2>
+		{% for k, (nombre, texto) in PERMISOS.items() %}
+		<label class="check" style="align-items:flex-start"><input type="checkbox" name="permisos" value="{{ k }}" {{ 'checked' if k in permisos_actuales }} style="margin-top:3px">
+			<span><strong>{{ nombre }}</strong><span class="sub">{{ texto }}</span></span></label>
+		{% endfor %}
+		<p class="ayuda" style="margin:0">El perfil Administración puede todo, menos la ficha clínica: esa se marca aparte, sólo para quien atiende pacientes.</p>
+	</section>
+	<div class="acciones"><button class="boton">{{ 'Guardar' if u.id else 'Crear y enviar invitación' }}</button><a href="{{ url_for('panel.cuentas') }}">Volver</a></div>
+	{% if u.id and u.id != current_user.id %}
+	<details style="margin-top:6px"><summary class="enlace-boton enlace-boton--peligro">Borrar cuenta</summary>
+		<p class="ayuda">La persona deja de poder entrar. Sus citas y notas no se borran.</p>
+		<button class="boton boton--peligro boton--chico" name="accion" value="borrar" formnovalidate>Sí, borrar</button>
+	</details>
+	{% endif %}
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById( 'rol' ).addEventListener( 'change', function ( e ) {
+	var lista = ( e.target.selectedOptions[ 0 ].dataset.permisos || '' ).split( ',' );
+	if ( e.target.value === 'personalizado' ) return;
+	document.querySelectorAll( 'input[name="permisos"]' ).forEach( function ( c ) { c.checked = lista.indexOf( c.value ) !== -1; } );
+} );
+</script>
+{% endblock %}

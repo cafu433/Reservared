@@ -1,0 +1,96 @@
+{% extends "panel/base.html" %}
+{% block titulo %}Agendar{% endblock %}
+{% block contenido %}
+<div class="cabecera"><div><h1>Agendar cita</h1><p class="cabecera__sub">Busca al paciente o regístralo, y revisa los datos de la cita.</p></div></div>
+<form method="post" class="formulario" id="form-agendar" style="max-width:960px">
+	{% include "panel/_csrf.html" %}
+	<section class="hoja formulario">
+		<h2>Paciente</h2>
+		<input type="hidden" name="paciente_id" id="paciente_id" value="{{ paciente.id if paciente else '' }}">
+		<div id="paciente-elegido" class="elegido" {{ 'hidden' if not paciente }}>
+			<span><strong id="pe-nombre">{{ paciente.nombre if paciente }}</strong> <span class="sub" id="pe-datos">{{ (paciente.rut ~ ' · ' if paciente and paciente.rut) }}{{ paciente.email if paciente }}</span></span>
+			<button type="button" class="enlace-boton" id="pe-cambiar">Cambiar</button>
+		</div>
+		<div id="paciente-buscar" {{ 'hidden' if paciente }}>
+			<div class="campo buscador">
+				<label for="buscar">Buscar paciente</label>
+				<input id="buscar" type="search" placeholder="Nombre, RUT, correo o teléfono" autocomplete="off">
+				<ul class="buscador__lista" id="resultados" hidden></ul>
+			</div>
+			<p class="ayuda">¿Es nuevo? Completa sus datos:</p>
+			<div class="rejilla-form">
+				<div class="campo"><label for="nombre">Nombre</label><input id="nombre" name="nombre" value="{{ d.nombre or '' }}"></div>
+				<div class="campo"><label for="rut">RUT <small>opcional</small></label><input id="rut" name="rut" value="{{ d.rut or '' }}" placeholder="12.345.678-5"></div>
+				<div class="campo"><label for="email">Correo</label><input id="email" type="email" name="email" value="{{ d.email or '' }}"></div>
+				<div class="campo"><label for="telefono">Teléfono</label><input id="telefono" type="tel" name="telefono" value="{{ d.telefono or '' }}"></div>
+			</div>
+		</div>
+	</section>
+
+	<section class="hoja formulario">
+		<h2>Cita</h2>
+		<div class="rejilla-form">
+			<div class="campo"><label for="servicio_id">Servicio</label>
+				<select id="servicio_id" name="servicio_id" required>{% for s in servicios %}<option value="{{ s.id }}" data-modalidad="{{ s.modalidad }}" {{ 'selected' if d.servicio_id == s.id|string }}>{{ s.nombre }} ({{ s.duracion }} min){{ ' · inactivo' if not s.activo }}</option>{% endfor %}</select></div>
+			{% if current_user.ve_todo %}
+			<div class="campo"><label for="profesional_id">Profesional</label>
+				<select id="profesional_id" name="profesional_id" required><option value="">Elegir…</option>{% for p in visibles %}<option value="{{ p.id }}" {{ 'selected' if d.profesional_id == p.id|string }}>{{ p.nombre }}</option>{% endfor %}</select></div>
+			{% endif %}
+			<div class="campo"><label for="modalidad">Modalidad</label>
+				<select id="modalidad" name="modalidad"><option value="">Según el servicio</option><option value="presencial" {{ 'selected' if d.modalidad == 'presencial' }}>Presencial</option><option value="online" {{ 'selected' if d.modalidad == 'online' }}>Online</option></select></div>
+			{% if sucursales %}
+			<div class="campo"><label for="sucursal_id">Sucursal</label>
+				<select id="sucursal_id" name="sucursal_id"><option value="">Según el horario</option>{% for s in sucursales %}<option value="{{ s.id }}" {{ 'selected' if d.sucursal_id == s.id|string }}>{{ s.nombre }}</option>{% endfor %}</select></div>
+			{% endif %}
+			{% if especialidades %}
+			<div class="campo"><label for="especialidad_id">Especialidad</label>
+				<select id="especialidad_id" name="especialidad_id"><option value="">—</option>{% for e in especialidades %}<option value="{{ e.id }}" {{ 'selected' if d.especialidad_id == e.id|string }}>{{ e.nombre }}</option>{% endfor %}</select></div>
+			{% endif %}
+			<div class="campo"><label for="fecha">Día</label><input id="fecha" type="date" name="fecha" required value="{{ d.fecha }}"></div>
+			<div class="campo"><label for="hora">Hora</label><input id="hora" type="time" name="hora" step="300" required value="{{ d.hora }}"></div>
+			<div class="campo"><label for="precio">Valor <small>{{ 'sugerido ' ~ (precio_sugerido|pesos) if precio_sugerido != '' else 'vacío = según tarifas' }}</small></label><input id="precio" name="precio" inputmode="numeric" value="{{ d.precio or '' }}" placeholder="{{ precio_sugerido }}"></div>
+			<div class="campo"><label for="estado">Estado</label>
+				<select id="estado" name="estado">{% for k, v in ESTADOS.items() %}<option value="{{ k }}" {{ 'selected' if (d.estado or 'confirmada') == k }}>{{ v }}</option>{% endfor %}</select></div>
+			<div class="campo ancho"><label for="notas">Comentario</label><textarea id="notas" name="notas" rows="2">{{ d.notas or '' }}</textarea></div>
+			<label class="check ancho"><input type="checkbox" name="avisar" value="1" {{ 'checked' if d.avisar }}> Enviar confirmación al paciente (correo y WhatsApp si está activo)</label>
+		</div>
+	</section>
+	<div class="acciones"><button class="boton">Agendar</button><a href="{{ url_for('panel.agendar') }}">Volver</a></div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+( function () {
+	var buscar = document.getElementById( 'buscar' ), lista = document.getElementById( 'resultados' ), espera;
+	var idInput = document.getElementById( 'paciente_id' ), caja = document.getElementById( 'paciente-buscar' ), elegido = document.getElementById( 'paciente-elegido' );
+	function elegir( p ) {
+		idInput.value = p.id;
+		document.getElementById( 'pe-nombre' ).textContent = p.nombre;
+		document.getElementById( 'pe-datos' ).textContent = [ p.rut, p.email, p.telefono ].filter( Boolean ).join( ' · ' );
+		elegido.hidden = false; caja.hidden = true; lista.hidden = true;
+	}
+	document.getElementById( 'pe-cambiar' ).addEventListener( 'click', function () { idInput.value = ''; elegido.hidden = true; caja.hidden = false; buscar.focus(); } );
+	buscar.addEventListener( 'input', function () {
+		clearTimeout( espera );
+		var q = buscar.value.trim();
+		if ( q.length < 2 ) { lista.hidden = true; return; }
+		espera = setTimeout( function () {
+			fetch( '{{ url_for('panel.buscar_paciente') }}?q=' + encodeURIComponent( q ), { credentials: 'same-origin' } )
+				.then( function ( r ) { return r.json(); } )
+				.then( function ( datos ) {
+					lista.innerHTML = '';
+					if ( ! datos.length ) { lista.innerHTML = '<li class="ayuda" style="padding:8px 10px">Sin resultados: completa los datos de abajo.</li>'; }
+					datos.forEach( function ( p ) {
+						var li = document.createElement( 'li' ), b = document.createElement( 'button' );
+						b.type = 'button';
+						b.textContent = p.nombre + ( p.rut ? ' · ' + p.rut : '' ) + ( p.email ? ' · ' + p.email : '' );
+						b.addEventListener( 'click', function () { elegir( p ); } );
+						li.appendChild( b ); lista.appendChild( li );
+					} );
+					lista.hidden = false;
+				} );
+		}, 250 );
+	} );
+}() );
+</script>
+{% endblock %}

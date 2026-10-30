@@ -123,3 +123,13 @@
 .pagina__pie { max-width: 760px; margin: 0 auto; text-align: center; font-size: 0.8rem; color: #8a959c; }
 .pagina__pie a { color: inherit; }
 .ao-sesion { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.ao-grupo { margin: 8px 0 0; font-size: 0.78em; letter-spacing: .08em; text-transform: uppercase; color: var(--ao-suave); font-weight: 700; }
+.ao-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ao-chip { padding: 6px 12px; border-radius: 99px; border: 1px solid var(--ao-linea); background: var(--ao-fondo); color: var(--ao-texto); font-size: 0.9em; }
+.ao-chip.is-elegida { background: var(--ao-acento); border-color: var(--ao-acento); color: #fff; }
+.ao-total { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.ao-pasarelas { border: 0; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ao-pasarelas legend { font-size: 0.9em; font-weight: 600; margin-bottom: 4px; }
+.ao-radio { display: flex; align-items: center; gap: 8px; }
+.ao-radio input { accent-color: var(--ao-acento); width: 18px; height: 18px; }
+.ao-cancelar select { width: 100%; padding: 8px 10px; border: 1px solid var(--ao-linea); border-radius: 6px; font: inherit; }

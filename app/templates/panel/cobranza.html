@@ -1,0 +1,88 @@
+{% extends "panel/base.html" %}
+{% block titulo %}Cobranza{% endblock %}
+{% block contenido %}
+<div class="cabecera">
+	<div><h1>Cobranza</h1><p class="cabecera__sub">Lo que se debe, lo cobrado y cuánto genera cada profesional.</p></div>
+	<a class="boton boton--sec" href="{{ url_for('panel.cobranza', desde=desde.isoformat(), hasta=hasta.isoformat(), profesional=prof or '', sucursal=suc or '', formato='csv') }}">Descargar pagos (Excel/CSV)</a>
+</div>
+<form method="get" class="filtros">
+	<div class="campo"><label for="desde">Pagos desde</label><input id="desde" type="date" name="desde" value="{{ desde.isoformat() }}"></div>
+	<div class="campo"><label for="hasta">Hasta</label><input id="hasta" type="date" name="hasta" value="{{ hasta.isoformat() }}"></div>
+	{% if current_user.ve_todo and visibles|length > 1 %}
+	<div class="campo"><label for="profesional">Profesional</label>
+		<select id="profesional" name="profesional"><option value="">Todos</option>{% for p in visibles %}<option value="{{ p.id }}" {{ 'selected' if prof == p.id }}>{{ p.nombre }}</option>{% endfor %}</select></div>
+	{% endif %}
+	{% if sucursales|length > 1 %}
+	<div class="campo"><label for="sucursal">Sucursal</label>
+		<select id="sucursal" name="sucursal"><option value="">Todas</option>{% for s in sucursales %}<option value="{{ s.id }}" {{ 'selected' if suc == s.id }}>{{ s.nombre }}</option>{% endfor %}</select></div>
+	{% endif %}
+	<button class="boton boton--sec">Ver</button>
+</form>
+
+<div class="kpis">
+	<div class="kpi kpi--bien"><span class="kpi__etiqueta">Cobrado en el periodo</span><span class="kpi__valor">{{ total_cobrado|pesos }}</span><span class="kpi__nota">{{ pagos|length }} pagos</span></div>
+	<div class="kpi {{ 'kpi--alerta' if total_deuda }}"><span class="kpi__etiqueta">Por cobrar</span><span class="kpi__valor">{{ total_deuda|pesos }}</span><span class="kpi__nota">{{ deudas|length }} {{ 'cita' if deudas|length == 1 else 'citas' }} con saldo</span></div>
+	{% for medio, monto in por_medio[:3] %}
+	<div class="kpi"><span class="kpi__etiqueta">{{ MEDIOS_PAGO[medio] }}</span><span class="kpi__valor">{{ monto|pesos }}</span></div>
+	{% endfor %}
+</div>
+
+<section style="margin-bottom:24px">
+	<h2 style="margin-bottom:8px">Por cobrar</h2>
+	{% if not deudas %}<p class="vacio">No hay saldos pendientes.</p>{% else %}
+	<form method="post" action="{{ url_for('panel.cobranza_recordar') }}">
+		{% include "panel/_csrf.html" %}
+		<div class="tabla-caja"><table>
+			<thead><tr><th><span class="sr" style="position:absolute;left:-9999px">Elegir</span></th><th>Fecha</th><th>Paciente</th><th>Servicio</th>{% if current_user.ve_todo %}<th>Profesional</th>{% endif %}<th>Valor</th><th>Pagado</th><th>Saldo</th></tr></thead>
+			<tbody>
+			{% for c in deudas %}
+				<tr>
+					<td><input type="checkbox" name="cita" value="{{ c.id }}" aria-label="Elegir a {{ c.nombre }}" {{ 'disabled' if not c.email }}></td>
+					<td class="num"><a href="{{ url_for('panel.cita', cita_id=c.id) }}">{{ c.inicio.strftime('%d-%m-%Y') }}</a></td>
+					<td><strong>{{ c.nombre }}</strong><span class="sub">{{ c.telefono }}</span></td>
+					<td>{{ c.servicio.nombre }}</td>
+					{% if current_user.ve_todo %}<td>{{ c.profesional.nombre }}</td>{% endif %}
+					<td class="num">{{ c.precio|pesos }}</td><td class="num">{{ c.pagado|pesos }}</td><td class="num"><strong>{{ c.saldo|pesos }}</strong></td>
+				</tr>
+			{% endfor %}
+			</tbody>
+		</table></div>
+		<div class="acciones" style="margin-top:10px"><button class="boton boton--sec boton--chico">Enviar recordatorio de pago a los marcados</button><span class="ayuda">Llega por correo con el enlace para pagar en línea.</span></div>
+	</form>
+	{% endif %}
+</section>
+
+<div class="dos">
+	<section>
+		<h2 style="margin-bottom:8px">Pagos del periodo</h2>
+		{% if not pagos %}<p class="vacio">No hay pagos en estas fechas.</p>{% else %}
+		<div class="tabla-caja"><table>
+			<thead><tr><th>Fecha</th><th>Paciente</th><th>Medio</th><th>Monto</th><th></th></tr></thead>
+			<tbody>
+			{% for p in pagos[:100] %}
+				<tr>
+					<td class="num">{{ p.fecha.strftime('%d-%m-%Y') }}</td>
+					<td>{% if p.cita %}<a href="{{ url_for('panel.cita', cita_id=p.cita_id) }}">{{ p.cita.nombre }}</a>{% else %}—{% endif %}{% if p.referencia %}<span class="sub">{{ p.referencia }}</span>{% endif %}</td>
+					<td>{{ p.medio_texto }}</td>
+					<td class="num">{{ p.monto|pesos }}</td>
+					<td><form method="post" action="{{ url_for('panel.cobranza_borrar_pago', pago_id=p.id) }}">{% include "panel/_csrf.html" %}<button class="enlace-boton enlace-boton--peligro" onclick="return confirm('¿Borrar este pago?')">Borrar</button></form></td>
+				</tr>
+			{% endfor %}
+			</tbody>
+		</table></div>
+		{% if pagos|length > 100 %}<p class="ayuda">Se muestran los últimos 100 de {{ pagos|length }}. Descarga el CSV para verlos todos.</p>{% endif %}
+		{% endif %}
+	</section>
+	<section>
+		<h2 style="margin-bottom:8px">Por profesional</h2>
+		<div class="tabla-caja"><table>
+			<thead><tr><th>Profesional</th><th>Citas</th><th>Valor</th><th>Cobrado</th></tr></thead>
+			<tbody>
+			{% for f in por_prof %}<tr><td>{{ f.nombre }}</td><td class="num">{{ f.citas }}</td><td class="num">{{ f.valor|pesos }}</td><td class="num">{{ f.cobrado|pesos }}</td></tr>
+			{% else %}<tr><td colspan="4">Sin datos.</td></tr>{% endfor %}
+			</tbody>
+		</table></div>
+		<p class="ayuda">Valor: lo que suman las citas del periodo (sin canceladas ni inasistencias). Cobrado: los pagos recibidos en esas fechas.</p>
+	</section>
+</div>
+{% endblock %}

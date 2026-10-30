@@ -1,0 +1,11 @@
+<div class="rejilla-form">
+	<div class="campo"><label for="nombre">Nombre</label><input id="nombre" name="nombre" required value="{{ p.nombre or '' }}"></div>
+	<div class="campo"><label for="rut">RUT</label><input id="rut" name="rut" value="{{ p.rut or '' }}" placeholder="12.345.678-5"></div>
+	<div class="campo"><label for="fecha_nacimiento">Fecha de nacimiento</label><input id="fecha_nacimiento" type="date" name="fecha_nacimiento" value="{{ p.fecha_nacimiento.isoformat() if p.fecha_nacimiento else '' }}"></div>
+	<div class="campo"><label for="prevision">Previsión</label><select id="prevision" name="prevision"><option value="">—</option>{% for x in PREVISIONES %}<option {{ 'selected' if p.prevision == x }}>{{ x }}</option>{% endfor %}</select></div>
+	<div class="campo"><label for="email">Correo</label><input id="email" type="email" name="email" value="{{ p.email or '' }}"></div>
+	<div class="campo"><label for="telefono">Teléfono</label><input id="telefono" type="tel" name="telefono" value="{{ p.telefono or '' }}"></div>
+	<div class="campo ancho"><label for="direccion">Dirección</label><input id="direccion" name="direccion" value="{{ p.direccion or '' }}"></div>
+	<div class="campo ancho"><label for="contacto_emergencia">Contacto de emergencia</label><input id="contacto_emergencia" name="contacto_emergencia" value="{{ p.contacto_emergencia or '' }}" placeholder="Nombre, parentesco y teléfono"></div>
+	<div class="campo ancho"><label for="notas">Notas administrativas <small>las ve el equipo; no van aquí datos clínicos</small></label><textarea id="notas" name="notas" rows="2">{{ p.notas or '' }}</textarea></div>
+</div>

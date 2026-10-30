@@ -133,7 +133,7 @@ def _crear_meet(cita):
 def asegurar(cita):
     """Si la cita es online y todavía no tiene enlace, se lo crea. Nunca falla:
     si Google no responde, queda sin enlace y se puede crear desde el panel."""
-    if not cita.servicio.online or cita.estado == "cancelada" or cita.enlace_sesion or cita.espera_pago:
+    if not cita.online or cita.estado == "cancelada" or cita.enlace_sesion or cita.espera_pago:
         return
     if google_conectado():
         try:

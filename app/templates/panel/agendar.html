@@ -1,0 +1,58 @@
+{% extends "panel/base.html" %}
+{% block titulo %}Agendar{% endblock %}
+{% block contenido %}
+<div class="cabecera">
+	<div><h1>Agendar</h1><p class="cabecera__sub">Elige el servicio y ve las horas libres de los próximos días.</p></div>
+	<a class="boton boton--sec" href="{{ url_for('panel.agendar_confirmar', paciente_id=paciente) }}">Agendar a otra hora (sobrecupo)</a>
+</div>
+{% if not servicios %}
+	<p class="vacio">Todavía no hay servicios activos.{% if current_user.puede('configuracion') %} <a href="{{ url_for('panel.servicios') }}">Crea el primero</a>.{% endif %}</p>
+{% else %}
+<form method="get" class="filtros">
+	<input type="hidden" name="paciente" value="{{ paciente }}">
+	<div class="campo"><label for="servicio">Servicio</label>
+		<select id="servicio" name="servicio" onchange="this.form.submit()">{% for s in servicios %}<option value="{{ s.id }}" {{ 'selected' if servicio and s.id == servicio.id }}>{{ (s.categoria ~ ' · ') if s.categoria }}{{ s.nombre }}</option>{% endfor %}</select></div>
+	{% if servicio and servicio.modalidad == 'ambas' %}
+	<div class="campo"><label for="modalidad">Modalidad</label>
+		<select id="modalidad" name="modalidad" onchange="this.form.submit()"><option value="">Elegir…</option><option value="presencial" {{ 'selected' if modalidad == 'presencial' }}>Presencial</option><option value="online" {{ 'selected' if modalidad == 'online' }}>Online</option></select></div>
+	{% endif %}
+	{% if sucursales|length > 1 and not (servicio and (servicio.online or modalidad == 'online')) %}
+	<div class="campo"><label for="sucursal">Sucursal</label>
+		<select id="sucursal" name="sucursal" onchange="this.form.submit()"><option value="">Todas</option>{% for s in sucursales %}<option value="{{ s.id }}" {{ 'selected' if sucursal == s.id }}>{{ s.nombre }}</option>{% endfor %}</select></div>
+	{% endif %}
+	{% if especialidades %}
+	<div class="campo"><label for="especialidad">Especialidad</label>
+		<select id="especialidad" name="especialidad" onchange="this.form.submit()"><option value="">Cualquiera</option>{% for e in especialidades %}<option value="{{ e.id }}" {{ 'selected' if especialidad == e.id }}>{{ e.nombre }}</option>{% endfor %}</select></div>
+	{% endif %}
+	{% if current_user.ve_todo %}
+	<div class="campo"><label for="profesional">Profesional</label>
+		<select id="profesional" name="profesional" onchange="this.form.submit()"><option value="">Cualquiera</option>{% for p in visibles %}<option value="{{ p.id }}" {{ 'selected' if prof_id == p.id }}>{{ p.nombre }}</option>{% endfor %}</select></div>
+	{% endif %}
+	<div class="campo"><label for="desde">Desde</label><input id="desde" type="date" name="desde" value="{{ desde.isoformat() }}"></div>
+	<button class="boton boton--sec">Buscar</button>
+</form>
+
+{% if necesita_modalidad %}
+	<p class="vacio">Este servicio se da presencial y online: elige la modalidad para ver las horas.</p>
+{% else %}
+<div class="dias-libres">
+	{% for d in dias %}
+	<section class="dia-libre">
+		<h3>{{ d|dia_largo }}</h3>
+		{% set horas = libres.get(d, {}) %}
+		{% if horas %}
+		<div class="horas-libres">
+			{% for h, quienes in horas.items() %}
+				{% for pid in quienes %}
+				<a class="hora-libre" href="{{ url_for('panel.agendar_confirmar', servicio_id=servicio.id, profesional_id=pid, fecha=d.isoformat(), hora=h, modalidad=modalidad or '', sucursal_id=sucursal or '', especialidad_id=especialidad or '', paciente_id=paciente) }}">{{ h }}{% if not prof_id and visibles|length > 1 %}<small>{{ nombres[pid].split()[0] }}</small>{% endif %}</a>
+				{% endfor %}
+			{% endfor %}
+		</div>
+		{% else %}<p class="ayuda" style="margin:0">Sin horas libres.</p>{% endif %}
+	</section>
+	{% endfor %}
+</div>
+<p class="acciones" style="margin-top:14px"><a class="boton boton--sec boton--chico" href="{{ url_for('panel.agendar', servicio=servicio.id, profesional=prof_id or '', modalidad=modalidad or '', sucursal=sucursal or '', especialidad=especialidad or '', paciente=paciente, desde=(dias[-1] + (dias[1] - dias[0])).isoformat()) }}">Ver los 7 días siguientes ›</a></p>
+{% endif %}
+{% endif %}
+{% endblock %}

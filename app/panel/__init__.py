@@ -1,3 +1,5 @@
+"""Panel del equipo, dividido en módulos. Cada módulo pide su permiso
+(ver app/permisos.py)."""
 from flask import Blueprint
 
 bp = Blueprint("panel", __name__)
@@ -11,4 +13,15 @@ def no_incrustar(resp):
     return resp
 
 
-from . import routes  # noqa: E402,F401
+from . import (  # noqa: E402,F401
+    agenda,
+    agendar,
+    citas,
+    cobranza,
+    comun,
+    configuracion,
+    cuenta,
+    dashboard,
+    equipo,
+    pacientes,
+)

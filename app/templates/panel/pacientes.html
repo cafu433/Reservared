@@ -1,24 +1,32 @@
 {% extends "panel/base.html" %}
 {% block titulo %}Pacientes{% endblock %}
 {% block contenido %}
-<div class="cabecera"><div><h1>Pacientes</h1><p class="cabecera__sub">Todas las personas que han reservado{{ ' contigo' if not current_user.es_admin }}.</p></div></div>
+<div class="cabecera">
+	<div><h1>Pacientes</h1><p class="cabecera__sub">{{ 'Todos los pacientes del centro.' if current_user.ve_todo else 'Las personas que has atendido o tienen hora contigo.' }}</p></div>
+	<a class="boton" href="{{ url_for('panel.paciente_nuevo') }}">Agregar paciente</a>
+</div>
 <form method="get" class="filtros">
-	<div class="campo"><label for="q">Buscar</label><input id="q" type="search" name="q" value="{{ texto }}" placeholder="Nombre, RUT, correo, teléfono"></div>
+	<div class="campo"><label for="q">Buscar</label><input id="q" type="search" name="q" value="{{ texto }}" placeholder="Nombre, RUT, correo, teléfono" autofocus></div>
 	<button class="boton boton--sec">Buscar</button>
 </form>
-{% if not filas %}<p class="vacio">{{ 'Nadie coincide con la búsqueda.' if texto else 'Todavía no hay reservas.' }}</p>{% else %}
+{% if not lista %}<p class="vacio">{{ 'Nadie coincide con la búsqueda.' if texto else 'Todavía no hay pacientes. Se agregan solos cuando alguien reserva.' }}</p>{% else %}
 <div class="tabla-caja"><table>
-	<thead><tr><th>Paciente</th><th>Contacto</th><th>Citas</th><th>Última</th></tr></thead>
+	<thead><tr><th>Paciente</th><th>Contacto</th><th>Previsión</th><th>Citas</th><th>Última</th></tr></thead>
 	<tbody>
-	{% for f in filas %}
+	{% for p in lista %}{% set r = resumen.get(p.id, (0, none)) %}
 		<tr>
-			<td><a href="{{ url_for('panel.citas', q=f.email, desde='2000-01-01', hasta='2100-01-01') }}"><strong>{{ f.nombre }}</strong></a>{% if f.rut %}<span class="sub">{{ f.rut }}</span>{% endif %}</td>
-			<td>{{ f.email }}<span class="sub">{{ f.telefono }}</span></td>
-			<td class="num">{{ f.citas }}</td>
-			<td class="num">{{ f.ultima.strftime('%d-%m-%Y') }}</td>
+			<td><a href="{{ url_for('panel.paciente', paciente_id=p.id) }}"><strong>{{ p.nombre }}</strong></a>{% if p.rut %}<span class="sub">{{ p.rut }}{% if p.edad is not none %} · {{ p.edad }} años{% endif %}</span>{% endif %}</td>
+			<td>{{ p.email }}<span class="sub">{{ p.telefono }}</span></td>
+			<td>{{ p.prevision or '—' }}</td>
+			<td class="num">{{ r[0] }}</td>
+			<td class="num">{{ r[1].strftime('%d-%m-%Y') if r[1] else '—' }}</td>
 		</tr>
 	{% endfor %}
 	</tbody>
 </table></div>
+<div class="acciones" style="margin-top:12px">
+	{% if num_pagina > 1 %}<a class="boton boton--sec boton--chico" href="{{ url_for('panel.pacientes', q=texto, pagina=num_pagina - 1) }}">‹ Anteriores</a>{% endif %}
+	{% if hay_mas %}<a class="boton boton--sec boton--chico" href="{{ url_for('panel.pacientes', q=texto, pagina=num_pagina + 1) }}">Siguientes ›</a>{% endif %}
+</div>
 {% endif %}
 {% endblock %}
