@@ -53,7 +53,7 @@ repositorio. Completa:
 | Build Command | `pip install -r requirements.txt && flask db upgrade` |
 | Start Command | `gunicorn wsgi:app --workers 2 --threads 8 --preload --timeout 60 --bind 0.0.0.0:$PORT` |
 | Health Check Path | `/healthz` |
-| Plan | **Starter**. El gratis se duerme y la página de reservas tarda ~1 minuto en abrir. |
+| Plan | Free para partir. El gratis se duerme tras 15 minutos sin uso y la página tarda ~1 minuto en despertar; cuando haya pacientes reales, conviene **Starter**. |
 
 ### 3. Variables de entorno (Render → Environment)
 

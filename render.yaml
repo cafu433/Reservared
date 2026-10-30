@@ -4,7 +4,7 @@ services:
   - type: web
     name: reservared
     runtime: python
-    plan: starter
+    plan: free
     buildCommand: "pip install -r requirements.txt && flask db upgrade"
     startCommand: "gunicorn wsgi:app --workers 2 --threads 8 --preload --timeout 60 --bind 0.0.0.0:$PORT"
     healthCheckPath: /healthz
