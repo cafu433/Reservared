@@ -157,7 +157,7 @@ def ajustes_pagina():
             "pedir_rut": bool(f.get("pedir_rut")),
             "email_aviso": f.get("email_aviso", "").strip(),
             "mensaje_confirmacion": f.get("mensaje_confirmacion", "").strip(),
-            "color": color if len(color) == 7 and color.startswith("#") else "#1f6f78",
+            "color": color if len(color) == 7 and color.startswith("#") else "#2f7a6b",
             "pago_modo": f.get("pago_modo") if f.get("pago_modo") in ("ninguno", "opcional", "obligatorio") else "ninguno",
             "pasarelas": [p for p in f.getlist("pasarelas") if p in ("webpay", "mercadopago")],
             "pago_porcentaje": min(100, max(1, f.get("pago_porcentaje", type=int) or 100)),
@@ -215,3 +215,83 @@ def google_desconectar():
     sesiones.desconectar()
     flash("Google desconectado.", "ok")
     return redirect(url_for("panel.ajustes_pagina"))
+
+
+# ---------- Mensajes ----------
+
+def _cita_de_ejemplo(online):
+    from datetime import timedelta
+    from types import SimpleNamespace
+
+    suc = SimpleNamespace(nombre="Providencia", direccion="Av. Providencia 1234, of. 302",
+                          indicaciones="Toca el timbre 302. Estacionamiento en el subterráneo.")
+    return SimpleNamespace(
+        nombre="Camila Pérez", inicio=(ahora() + timedelta(days=2)).replace(hour=10, minute=30, second=0),
+        servicio=SimpleNamespace(nombre="Psicoterapia individual"),
+        profesional=SimpleNamespace(nombre="Ana Rojas"),
+        sucursal=None if online else suc, online=online,
+        enlace_sesion="https://meet.google.com/abc-defg-hij" if online else "",
+        precio=35000, saldo=35000,
+    )
+
+
+def _vistas(asunto, cuerpo):
+    from .. import mensajes
+
+    enlace = correos.url_absoluta("publico.reservar_pagina").replace("/reservar", "/cita/ejemplo")
+    vistas = []
+    for online in (False, True):
+        datos = mensajes.datos_de(_cita_de_ejemplo(online), enlace, 35000)
+        vistas.append({"titulo": "Cita online" if online else "Cita presencial",
+                       "asunto": mensajes.rellenar(asunto, datos), "cuerpo": mensajes.rellenar(cuerpo, datos)})
+    return vistas
+
+
+@bp.get("/mensajes")
+@requiere("configuracion")
+def mensajes_lista():
+    from .. import mensajes
+
+    lista = [{"clave": k, **v, **mensajes.plantilla(k)} for k, v in mensajes.PLANTILLAS.items()]
+    return render_template("panel/mensajes.html", lista=lista)
+
+
+@bp.route("/mensajes/<clave>", methods=["GET", "POST"])
+@requiere("configuracion")
+def mensaje_editar(clave):
+    from .. import mensajes
+
+    if clave not in mensajes.PLANTILLAS:
+        abort(404)
+    info = mensajes.PLANTILLAS[clave]
+    p = mensajes.plantilla(clave)
+    asunto, cuerpo, activo = p["asunto"], p["cuerpo"], p["activo"]
+
+    if request.method == "POST":
+        accion = request.form.get("accion")
+        if accion == "restablecer":
+            mensajes.restablecer(clave)
+            flash("Volvió al texto original.", "ok")
+            return redirect(url_for("panel.mensaje_editar", clave=clave))
+        asunto = request.form.get("asunto", "").strip()
+        cuerpo = request.form.get("cuerpo", "").replace("\r\n", "\n").strip()
+        activo = bool(request.form.get("activo"))
+        malos = mensajes.validar(asunto + cuerpo)
+        if not cuerpo:
+            flash("El mensaje no puede quedar vacío.", "error")
+        elif malos:
+            flash("Estos campos no existen: " + ", ".join("{" + m + "}" for m in malos) + ". Revisa cómo están escritos.", "error")
+        elif accion == "guardar":
+            mensajes.guardar(clave, asunto, cuerpo, activo)
+            flash("Mensaje guardado. Desde ahora se envía así.", "ok")
+            return redirect(url_for("panel.mensaje_editar", clave=clave))
+        elif accion == "probar":
+            v = _vistas(asunto, cuerpo)[1 if request.form.get("online_prueba") else 0]
+            correos.enviar(current_user.email, "[Prueba] " + (v["asunto"] or info["nombre"]), v["cuerpo"])
+            flash(f"Te enviamos una prueba a {current_user.email}."
+                  + ("" if current_app.config["SMTP_HOST"] else " Ojo: el correo todavía no está configurado, así que no va a llegar."),
+                  "ok" if current_app.config["SMTP_HOST"] else "aviso")
+
+    return render_template("panel/mensaje_editar.html", clave=clave, info=info, asunto=asunto, cuerpo=cuerpo,
+                           activo=activo, editado=p["editado"], campos=mensajes.CAMPOS, vistas=_vistas(asunto, cuerpo),
+                           es_whatsapp=clave.startswith("whatsapp"))

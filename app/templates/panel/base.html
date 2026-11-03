@@ -11,6 +11,7 @@
 </head>
 <body>
 {% set pagina = request.endpoint %}
+{% from "panel/_iconos.html" import icono %}
 <div class="app">
 	<aside class="barra">
 		<a class="marca" href="{{ url_for('panel.inicio') }}">
@@ -20,35 +21,39 @@
 		<div class="negocio">{{ negocio }}</div>
 		<details class="menu-movil"><summary>Menú</summary></details>
 		<nav class="nav" aria-label="Módulos">
-			{% if current_user.puede('dashboard') %}<a href="{{ url_for('panel.dashboard') }}" class="{{ 'activo' if pagina == 'panel.dashboard' }}">Dashboard</a>{% endif %}
-			{% if current_user.puede('agendar') %}<a href="{{ url_for('panel.agendar') }}" class="{{ 'activo' if pagina in ('panel.agendar', 'panel.agendar_confirmar') }}">Agendar</a>{% endif %}
+			{% macro item(endpoint, nombre, texto, activos=()) %}<a href="{{ url_for(endpoint) }}" class="{{ 'activo' if pagina == endpoint or pagina in activos }}">{{ icono(nombre) }}{{ texto }}</a>{% endmacro %}
+			{% if current_user.puede('dashboard') %}{{ item('panel.dashboard', 'dashboard', 'Inicio') }}{% endif %}
+			{% if current_user.puede('agendar') %}{{ item('panel.agendar', 'agendar', 'Agendar', ('panel.agendar_confirmar',)) }}{% endif %}
 			{% if current_user.puede('agenda') %}
-				<a href="{{ url_for('panel.agenda') }}" class="{{ 'activo' if pagina == 'panel.agenda' }}">Agenda</a>
-				<a href="{{ url_for('panel.citas') }}" class="{{ 'activo' if pagina in ('panel.citas', 'panel.cita') }}">Citas</a>
+				{{ item('panel.agenda', 'agenda', 'Agenda') }}
+				{{ item('panel.citas', 'citas', 'Citas', ('panel.cita',)) }}
 			{% endif %}
-			{% if current_user.puede('pacientes') %}<a href="{{ url_for('panel.pacientes') }}" class="{{ 'activo' if pagina in ('panel.pacientes', 'panel.paciente', 'panel.paciente_nuevo') }}">Pacientes</a>{% endif %}
-			{% if current_user.puede('cobranza') %}<a href="{{ url_for('panel.cobranza') }}" class="{{ 'activo' if pagina == 'panel.cobranza' }}">Cobranza</a>{% endif %}
+			{% if current_user.puede('pacientes') %}{{ item('panel.pacientes', 'pacientes', 'Pacientes', ('panel.paciente', 'panel.paciente_nuevo')) }}{% endif %}
+			{% if current_user.puede('cobranza') %}{{ item('panel.cobranza', 'cobranza', 'Cobranza') }}{% endif %}
 			{% if current_user.puede('equipo') %}
 				<div class="nav__grupo">Equipo</div>
-				<a href="{{ url_for('panel.profesionales') }}" class="{{ 'activo' if pagina in ('panel.profesionales', 'panel.profesional') }}">Profesionales</a>
-				<a href="{{ url_for('panel.cuentas') }}" class="{{ 'activo' if pagina in ('panel.cuentas', 'panel.cuenta_editar') }}">Cuentas y permisos</a>
+				{{ item('panel.profesionales', 'profesionales', 'Profesionales', ('panel.profesional',)) }}
+				{{ item('panel.cuentas', 'cuentas', 'Cuentas y permisos', ('panel.cuenta_editar',)) }}
 			{% elif current_user.profesional_id %}
-				<a href="{{ url_for('panel.mi_horario') }}" class="{{ 'activo' if pagina == 'panel.profesional' }}">Mi horario</a>
+				{{ item('panel.mi_horario', 'horario', 'Mi horario', ('panel.profesional',)) }}
 			{% endif %}
 			{% if current_user.puede('configuracion') or current_user.puede('agendar') %}
 				<div class="nav__grupo">Configuración</div>
 				{% if current_user.puede('configuracion') %}
-				<a href="{{ url_for('panel.servicios') }}" class="{{ 'activo' if pagina == 'panel.servicios' }}">Servicios y precios</a>
-				<a href="{{ url_for('panel.sucursales_pagina') }}" class="{{ 'activo' if pagina == 'panel.sucursales_pagina' }}">Sucursales</a>
+				{{ item('panel.servicios', 'servicios', 'Servicios y precios') }}
+				{{ item('panel.sucursales_pagina', 'sucursales', 'Sucursales') }}
 				{% endif %}
-				<a href="{{ url_for('panel.bloqueos') }}" class="{{ 'activo' if pagina == 'panel.bloqueos' }}">Bloqueos</a>
-				{% if current_user.puede('configuracion') %}<a href="{{ url_for('panel.ajustes_pagina') }}" class="{{ 'activo' if pagina == 'panel.ajustes_pagina' }}">Ajustes</a>{% endif %}
+				{{ item('panel.bloqueos', 'bloqueos', 'Bloqueos') }}
+				{% if current_user.puede('configuracion') %}
+				{{ item('panel.mensajes_lista', 'mensajes', 'Mensajes', ('panel.mensaje_editar',)) }}
+				{{ item('panel.ajustes_pagina', 'ajustes', 'Ajustes') }}
+				{% endif %}
 			{% endif %}
-			<a href="{{ url_for('publico.reservar_pagina') }}" target="_blank" rel="noopener">Página de reservas ↗</a>
+			<a class="nav__externo" href="{{ url_for('publico.reservar_pagina') }}" target="_blank" rel="noopener">{{ icono('externo') }}Ver página de reservas</a>
 		</nav>
 		<div class="barra__pie">
-			<span>{{ current_user.nombre }}</span>
-			<a href="{{ url_for('panel.cuenta') }}" style="color:inherit">Mi contraseña</a>
+			<strong>{{ current_user.nombre }}</strong>
+			<a href="{{ url_for('panel.cuenta') }}">Mi contraseña</a>
 			<form method="post" action="{{ url_for('panel.salir') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button>Salir</button></form>
 		</div>
 	</aside>

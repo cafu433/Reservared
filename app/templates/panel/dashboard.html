@@ -8,8 +8,9 @@
 </ul>
 {% endmacro %}
 {% block contenido %}
+{% include "panel/_primeros_pasos.html" %}
 <div class="cabecera">
-	<div><h1>Dashboard</h1><p class="cabecera__sub">{{ titulo }} · {{ desde.strftime('%d-%m-%Y') }} al {{ hasta.strftime('%d-%m-%Y') }}</p></div>
+	<div><h1>Inicio</h1><p class="cabecera__sub">{{ titulo }} · {{ desde.strftime('%d-%m-%Y') }} al {{ hasta.strftime('%d-%m-%Y') }}</p></div>
 </div>
 <form method="get" class="filtros">
 	<div class="campo"><label for="periodo">Periodo</label>
@@ -46,7 +47,7 @@
 
 <section class="hoja" style="margin-bottom:20px">
 	<div class="cabecera" style="margin:0"><h2>Citas por día</h2>
-		<div class="leyenda-graf"><span><i style="background:var(--acento)"></i>Citas</span><span><i style="background:var(--ahora)"></i>Canceladas</span></div></div>
+		<div class="leyenda-graf"><span><i style="background:var(--acento)"></i>Citas</span><span><i style="background:var(--coral)"></i>Canceladas</span></div></div>
 	{% set n = r.serie|length %}
 	{% set ancho = 900 %}{% set alto = 180 %}{% set base = 160 %}
 	{% set paso = ancho / (n if n else 1) %}
@@ -59,7 +60,7 @@
 			{% set h1 = (140 * d.citas / maximo) if maximo else 0 %}
 			{% set h2 = (140 * d.canceladas / maximo) if maximo else 0 %}
 			<rect x="{{ x + paso * 0.15 }}" y="{{ base - h1 }}" width="{{ paso * 0.7 }}" height="{{ h1 }}" rx="2" fill="var(--acento)"><title>{{ d.dia.strftime('%d-%m') }}: {{ d.citas }} citas</title></rect>
-			<rect x="{{ x + paso * 0.15 }}" y="{{ base - h1 - h2 }}" width="{{ paso * 0.7 }}" height="{{ h2 }}" rx="2" fill="var(--ahora)"><title>{{ d.dia.strftime('%d-%m') }}: {{ d.canceladas }} canceladas</title></rect>
+			<rect x="{{ x + paso * 0.15 }}" y="{{ base - h1 - h2 }}" width="{{ paso * 0.7 }}" height="{{ h2 }}" rx="2" fill="var(--coral)"><title>{{ d.dia.strftime('%d-%m') }}: {{ d.canceladas }} canceladas</title></rect>
 			{% if n <= 14 or d.dia.day in (1, 8, 15, 22) or loop.first %}<text x="{{ x + paso / 2 }}" y="{{ base + 15 }}" text-anchor="middle">{{ d.dia.day }}</text>{% endif %}
 		{% endfor %}
 	</svg>

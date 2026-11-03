@@ -10,7 +10,7 @@ from ..models import Cita, Servicio
 from ..permisos import requiere
 from ..tiempo import MESES, ahora
 from . import bp
-from .comun import fecha, profesionales_visibles, sucursales
+from .comun import fecha, primeros_pasos, profesionales_visibles, sucursales
 
 PERIODOS = {"mes": "Este mes", "mes_anterior": "Mes anterior", "7": "Últimos 7 días", "30": "Últimos 30 días",
             "90": "Últimos 90 días", "rango": "Elegir fechas"}
@@ -59,5 +59,5 @@ def dashboard():
     return render_template(
         "panel/dashboard.html", r=r, periodo=periodo, periodos=PERIODOS, desde=desde, hasta=hasta, titulo=titulo,
         prof=prof, suc=suc, categoria=categoria, visibles=visibles, sucursales=sucursales(), categorias=sorted(categorias),
-        maximo=maximo, proximas=proximas.order_by(Cita.inicio).limit(12).all(), hoy=hoy,
+        maximo=maximo, proximas=proximas.order_by(Cita.inicio).limit(12).all(), hoy=hoy, pp=primeros_pasos(),
     )

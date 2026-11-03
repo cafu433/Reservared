@@ -1,0 +1,71 @@
+{% extends "panel/base.html" %}
+{% block titulo %}{{ info.nombre }}{% endblock %}
+{% block contenido %}
+<div class="cabecera">
+	<div><a href="{{ url_for('panel.mensajes_lista') }}" class="volver-link">‹ Mensajes</a><h1>{{ info.nombre }}</h1><p class="cabecera__sub">{{ info.cuando }}</p></div>
+</div>
+<div class="dos">
+	<form method="post" class="hoja formulario" id="form-mensaje">
+		{% include "panel/_csrf.html" %}
+		{% if not es_whatsapp %}
+		<label class="check"><input type="checkbox" name="activo" value="1" {{ 'checked' if activo }}> Enviar este mensaje</label>
+		<div class="campo"><label for="asunto">Asunto del correo</label><input id="asunto" name="asunto" value="{{ asunto }}"></div>
+		{% else %}<input type="hidden" name="activo" value="1">{% endif %}
+		<div class="campo"><label for="cuerpo">{{ 'Texto' if es_whatsapp else 'Mensaje' }}</label>
+			<textarea id="cuerpo" name="cuerpo" rows="16" class="editor">{{ cuerpo }}</textarea></div>
+		<div class="ayuda-caja">
+			<p><strong>Campos que se rellenan solos.</strong> Haz clic para insertarlos donde está el cursor:</p>
+			<div class="fichas">
+				{% for k, v in campos.items() %}<button type="button" class="ficha" data-campo="{{ '{' ~ k ~ '}' }}" title="{{ v }}">{{ '{' ~ k ~ '}' }}</button>{% endfor %}
+			</div>
+			<p><strong>Partes sólo para un tipo de cita:</strong> lo que escribas entre <code>[online]</code> y <code>[/online]</code> sale sólo en las citas online; entre <code>[presencial]</code> y <code>[/presencial]</code>, sólo en las presenciales.</p>
+			<div class="fichas">
+				<button type="button" class="ficha" data-campo="[online]Entra a tu sesión aquí: {enlace_sesion}[/online]">Bloque online con enlace</button>
+				<button type="button" class="ficha" data-campo="[presencial]Te esperamos en {lugar}.[/presencial]">Bloque presencial con dirección</button>
+			</div>
+		</div>
+		<div class="acciones">
+			<button class="boton" name="accion" value="guardar">Guardar</button>
+			<button class="boton boton--sec" name="accion" value="previa">Actualizar vista previa</button>
+			{% if not es_whatsapp %}
+			<button class="boton boton--sec" name="accion" value="probar">Enviarme una prueba</button>
+			<label class="check" style="font-size:.85rem"><input type="checkbox" name="online_prueba" value="1" checked> como cita online</label>
+			{% endif %}
+		</div>
+		{% if editado %}
+		<details><summary class="enlace-boton">Volver al texto original</summary>
+			<p class="ayuda">Se pierde lo que escribiste en este mensaje.</p>
+			<button class="boton boton--peligro boton--chico" name="accion" value="restablecer" formnovalidate>Sí, volver al original</button>
+		</details>
+		{% endif %}
+	</form>
+	<aside style="display:grid;gap:16px">
+		<h2>Vista previa</h2>
+		{% for v in vistas %}
+		<section class="correo-previa">
+			<p class="correo-previa__tipo">{{ v.titulo }}</p>
+			{% if v.asunto %}<p class="correo-previa__asunto">{{ v.asunto }}</p>{% endif %}
+			<div class="correo-previa__cuerpo">{{ v.cuerpo }}</div>
+		</section>
+		{% endfor %}
+		<p class="ayuda">Con datos de ejemplo. Guarda o aprieta "Actualizar vista previa" para ver tus cambios.</p>
+	</aside>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+( function () {
+	var t = document.getElementById( 'cuerpo' ), ultimo = t;
+	document.getElementById( 'asunto' ) && document.getElementById( 'asunto' ).addEventListener( 'focus', function ( e ) { ultimo = e.target; } );
+	t.addEventListener( 'focus', function () { ultimo = t; } );
+	document.querySelectorAll( '.ficha' ).forEach( function ( b ) {
+		b.addEventListener( 'click', function () {
+			var campo = ultimo, v = b.dataset.campo, i = campo.selectionStart || campo.value.length, f = campo.selectionEnd || i;
+			campo.value = campo.value.slice( 0, i ) + v + campo.value.slice( f );
+			campo.focus();
+			campo.selectionStart = campo.selectionEnd = i + v.length;
+		} );
+	} );
+}() );
+</script>
+{% endblock %}

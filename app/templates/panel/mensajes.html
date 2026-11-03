@@ -1,0 +1,19 @@
+{% extends "panel/base.html" %}
+{% block titulo %}Mensajes{% endblock %}
+{% block contenido %}
+<div class="cabecera">
+	<div><h1>Mensajes</h1><p class="cabecera__sub">Lo que reciben los pacientes. Se envían solos; aquí decides qué dicen.</p></div>
+</div>
+<div class="tarjetas">
+	{% for m in lista %}
+	<a class="tarjeta" href="{{ url_for('panel.mensaje_editar', clave=m.clave) }}">
+		<span class="tarjeta__titulo">{{ m.nombre }}</span>
+		<span class="tarjeta__texto">{{ m.cuando }}</span>
+		<span class="acciones">
+			{% if not m.activo %}<span class="chip chip--cancelada">Apagado</span>{% elif m.editado %}<span class="chip chip--confirmada">Personalizado</span>{% else %}<span class="chip">Texto original</span>{% endif %}
+			{% if m.clave.startswith('whatsapp') %}<span class="chip chip--online">WhatsApp</span>{% else %}<span class="chip">Correo</span>{% endif %}
+		</span>
+	</a>
+	{% endfor %}
+</div>
+{% endblock %}

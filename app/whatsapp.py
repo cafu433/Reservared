@@ -79,14 +79,14 @@ def enlace_manual(telefono, texto):
 
 
 def texto_cita(cita, enlace, negocio):
-    t = (f"Hola {cita.nombre.split()[0] if cita.nombre else ''}, te escribimos de {negocio}. "
-         f"Tu hora es el {fecha_larga(cita.inicio)} con {cita.profesional.nombre} ({cita.servicio.nombre}).")
-    if cita.enlace_sesion:
-        t += f" Sesión online: {cita.enlace_sesion}"
-    return t + f" Para ver o cancelar tu hora: {enlace}"
+    from . import mensajes
+
+    armado = mensajes.armar("whatsapp_cita", cita, enlace)
+    return armado[1] if armado else ""
 
 
 def texto_cobro(cita, enlace, negocio, saldo_texto):
-    return (f"Hola {cita.nombre.split()[0] if cita.nombre else ''}, te escribimos de {negocio}. "
-            f"Queda un saldo de {saldo_texto} de tu atención del {fecha_larga(cita.inicio)}. "
-            f"Puedes pagarlo aquí: {enlace}")
+    from . import mensajes
+
+    armado = mensajes.armar("whatsapp_cobro", cita, enlace)
+    return armado[1] if armado else ""

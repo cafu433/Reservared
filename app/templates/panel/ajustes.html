@@ -45,8 +45,9 @@
 		<p class="ayuda" style="margin:0">Los saldos que quedan se cobran desde Cobranza: el recordatorio lleva el enlace para pagar en línea.</p>
 	</section>
 
-	<section class="hoja formulario">
+	<section class="hoja formulario" id="avisos">
 		<h2>Avisos automáticos</h2>
+		<p class="ayuda" style="margin:0">El texto de cada aviso se edita en <a href="{{ url_for('panel.mensajes_lista') }}">Mensajes</a>.</p>
 		<p style="margin:0">Correo: {% if config.SMTP_HOST %}<span class="chip chip--confirmada">listo</span>{% else %}<span class="chip chip--pendiente">falta configurar SMTP</span>{% endif %}</p>
 		<p style="margin:0">WhatsApp: {% if whatsapp_listo %}<span class="chip chip--confirmada">listo</span>{% else %}<span class="chip chip--pendiente">sin conectar</span> <span class="ayuda">Mientras tanto, en cada cita hay un botón para enviarlo desde tu WhatsApp.</span>{% endif %}</p>
 		<p style="margin:0">Recordatorio del día antes: {% if recordatorios_listos %}<span class="chip chip--confirmada">listo</span> <span class="ayuda">La tarea programada debe llamar a <code>{{ url_tareas }}?clave=…</code> cada hora.</span>{% else %}<span class="chip chip--pendiente">falta CLAVE_TAREAS</span>{% endif %}</p>

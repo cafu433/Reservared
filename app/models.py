@@ -237,6 +237,7 @@ class Cita(db.Model):
     motivo_cancelacion = db.Column(db.String(255), nullable=False, default="")
     reagendada = db.Column(db.Integer, nullable=False, default=0)  # veces que se movió
     enlace_sesion = db.Column(db.String(500), nullable=False, default="")
+    enlace_avisado = db.Column(db.String(500), nullable=False, default="")  # el último enlace que se le envió
     google_evento_id = db.Column(db.String(255), nullable=False, default="")
 
     token = db.Column(db.String(43), nullable=False, unique=True, default=lambda: secrets.token_urlsafe(32))

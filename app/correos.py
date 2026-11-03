@@ -10,7 +10,8 @@ from email.utils import formataddr
 
 from flask import current_app, url_for
 
-from . import ajustes, whatsapp
+from . import ajustes, mensajes, whatsapp
+from .extensions import db
 from .tiempo import ahora, fecha_larga, pesos
 
 
@@ -112,11 +113,14 @@ def _al_equipo(cita, asunto, intro):
     )
 
 
-def _al_paciente(cita, asunto, intro, cierre=True):
-    cuerpo = f"Hola {cita.nombre},\n\n{intro}\n\n{_detalle(cita)}"
-    if cierre:
-        cuerpo += f"\n\n{ajustes.get('mensaje_confirmacion')}\n\nVer, reagendar o cancelar tu hora: {_enlace(cita)}"
-    enviar(cita.email, asunto, cuerpo + f"\n\n{_negocio()}")
+def _al_paciente(clave, cita, monto=0):
+    """Envía al paciente el mensaje `clave` de Ajustes → Mensajes, si está activo."""
+    armado = mensajes.armar(clave, cita, _enlace(cita), monto)
+    if armado:
+        enviar(cita.email, *armado)
+        if cita.online and cita.enlace_sesion and "{enlace_sesion}" in mensajes.plantilla(clave)["cuerpo"]:
+            cita.enlace_avisado = cita.enlace_sesion
+            db.session.commit()
 
 
 def nueva_cita(cita, avisar_equipo=True):
@@ -125,10 +129,20 @@ def nueva_cita(cita, avisar_equipo=True):
     from . import sesiones
 
     sesiones.asegurar(cita)
-    _al_paciente(cita, f"Tu hora en {_negocio()}: {fecha_larga(cita.inicio)}", "Tu hora quedó reservada.")
+    _al_paciente("confirmacion", cita)
     whatsapp.confirmacion(cita, _enlace(cita))
     if avisar_equipo:
         _al_equipo(cita, f"Nueva reserva: {cita.nombre}, {fecha_larga(cita.inicio)}", "Llegó una reserva nueva.")
+
+
+def enlace_si_falta(cita):
+    """Si una cita online recibió (o cambió) su enlace después de avisar al
+    paciente, le manda el correo con el enlace nuevo."""
+    if (not cita.online or not cita.enlace_sesion or cita.enlace_sesion == cita.enlace_avisado
+            or cita.estado not in ("confirmada", "pendiente") or cita.espera_pago or cita.inicio < ahora()):
+        return False
+    _al_paciente("enlace_sesion", cita)
+    return True
 
 
 def reagendada(cita):
@@ -136,13 +150,13 @@ def reagendada(cita):
 
     sesiones.cancelar(cita)
     sesiones.asegurar(cita)
-    _al_paciente(cita, f"Tu hora cambió: {fecha_larga(cita.inicio)}", "Tu hora quedó en un nuevo día u horario.")
+    _al_paciente("reagendada", cita)
     whatsapp.confirmacion(cita, _enlace(cita))
     _al_equipo(cita, f"Hora reagendada: {cita.nombre}, {fecha_larga(cita.inicio)}", "Se movió esta cita.")
 
 
 def recordatorio(cita):
-    _al_paciente(cita, f"Recordatorio: tu hora es {fecha_larga(cita.inicio)}", "Te recordamos tu hora.")
+    _al_paciente("recordatorio", cita)
     whatsapp.recordatorio(cita, _enlace(cita))
 
 
@@ -153,33 +167,29 @@ def cancelada_por_paciente(cita):
 
 
 def cancelada_por_equipo(cita):
-    _al_paciente(cita, f"Tu hora fue cancelada — {_negocio()}",
-                 "Tu hora fue cancelada. Si quieres otra, puedes reservar de nuevo o escribirnos.", cierre=False)
+    _al_paciente("cancelada", cita)
 
 
 def confirmada(cita):
-    _al_paciente(cita, f"Tu hora está confirmada — {_negocio()}", "Tu hora está confirmada.")
+    _al_paciente("confirmada", cita)
 
 
 def pago_tardio(cita, monto):
     _al_equipo(
         cita,
         f"Pago recibido de una hora ya liberada: {cita.nombre}",
-        f"Mercado Pago confirmó el pago de {pesos(monto)}, pero llegó después del plazo y la hora "
+        f"Llegó un pago en línea de {pesos(monto)}, pero después del plazo, y la hora "
         "ya se había liberado. Contacta al paciente para darle otra hora o devolver el pago.",
     )
 
 
 def pago_recibido(cita, monto):
-    _al_paciente(cita, f"Recibimos tu pago — {_negocio()}", f"Recibimos tu pago de {pesos(monto)}. Gracias.", cierre=False)
+    _al_paciente("pago_recibido", cita, monto)
 
 
 def cobro(cita, enlace_pago=""):
     """Recordatorio de saldo pendiente."""
-    texto = f"Queda un saldo de {pesos(cita.saldo)} de tu atención."
-    if enlace_pago:
-        texto += f"\n\nPuedes pagarlo en línea aquí: {enlace_pago}"
-    _al_paciente(cita, f"Saldo pendiente — {_negocio()}", texto, cierre=False)
+    _al_paciente("cobro", cita)
 
 
 def restablecer_clave(usuario, enlace):

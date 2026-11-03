@@ -79,6 +79,7 @@ def cita(cita_id):
                     sesiones.asegurar(c)
                     if request.form.get("avisar") and nuevo == "confirmada":
                         correos.confirmada(c)
+                    correos.enlace_si_falta(c)
                 flash(f"Estado: {ESTADOS[nuevo]}.", "ok")
 
         elif accion == "reagendar":
@@ -122,6 +123,8 @@ def cita(cita_id):
                 cobros.registrar(c, entero(request.form.get("monto")), request.form.get("medio"),
                                  fecha(request.form.get("fecha_pago"), ahora().date()), request.form.get("referencia", ""),
                                  request.form.get("nota", ""), current_user.id)
+                sesiones.asegurar(c)
+                correos.enlace_si_falta(c)
                 flash("Pago registrado.", "ok")
             except cobros.CobroError as e:
                 flash(str(e), "error")
@@ -173,7 +176,8 @@ def cita(cita_id):
             _puede_editar()
             c.enlace_sesion = request.form.get("enlace_sesion", "").strip()[:500]
             db.session.commit()
-            flash("Enlace guardado.", "ok")
+            enviado = correos.enlace_si_falta(c)
+            flash("Enlace guardado." + (" Se lo enviamos al paciente por correo." if enviado else ""), "ok")
 
         elif accion == "crear_meet":
             _puede_editar()
@@ -181,8 +185,11 @@ def cita(cita_id):
             c.enlace_sesion = ""
             db.session.commit()
             sesiones.asegurar(c)
-            flash("Enlace de sesión creado." if c.enlace_sesion else "No se pudo crear el Meet. Revisa la conexión con Google.",
-                  "ok" if c.enlace_sesion else "error")
+            enviado = correos.enlace_si_falta(c)
+            if c.enlace_sesion:
+                flash("Enlace de sesión creado." + (" Se lo enviamos al paciente por correo." if enviado else ""), "ok")
+            else:
+                flash("No se pudo crear el Meet. Revisa la conexión con Google.", "error")
 
         elif accion == "reenviar":
             _puede_editar()

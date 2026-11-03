@@ -1,0 +1,17 @@
+{% if pp %}
+<section class="pasos" aria-labelledby="pp-titulo">
+	<div class="pasos__cab">
+		<div><h2 id="pp-titulo">Primeros pasos</h2><p class="ayuda" style="margin:2px 0 0">Deja tu centro listo para recibir reservas.</p></div>
+		<span class="ayuda"><strong>{{ pp.hechos }} de {{ pp.total }}</strong> listos</span>
+	</div>
+	<div class="pasos__barra"><span style="width: {{ pp.pct }}%"></span></div>
+	<ol>
+		{% for p in pp.pasos %}
+		<li><a class="paso {{ 'paso--hecho' if p.hecho }}" href="{{ p.url }}">
+			<span class="paso__num">{{ '✓' if p.hecho else loop.index }}</span>
+			<span><span class="paso__titulo">{{ p.titulo }}{% if p.opcional and not p.hecho %} <span class="ayuda">(opcional)</span>{% endif %}</span><span class="paso__texto">{{ p.texto }}</span></span>
+		</a></li>
+		{% endfor %}
+	</ol>
+</section>
+{% endif %}

@@ -16,7 +16,7 @@ PREDETERMINADOS = {
     "pedir_rut": True,
     "email_aviso": "",
     "mensaje_confirmacion": "Te esperamos. Si no puedes venir, cancela tu hora desde el enlace del correo.",
-    "color": "#1f6f78",
+    "color": "#2f7a6b",
     "pago_modo": "ninguno",  # ninguno | opcional | obligatorio
     "pasarelas": ["webpay"],  # webpay y/o mercadopago
     "pago_porcentaje": 100,

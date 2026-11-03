@@ -108,3 +108,35 @@ def enlace_clave(usuario):
 
     token = serializador().dumps({"u": usuario.id, "h": usuario.clave_hash[-12:]})
     return url_absoluta("panel.restablecer", token=token)
+
+
+def primeros_pasos():
+    """Lo que falta para dejar el centro funcionando, en orden. None si ya está todo."""
+    from flask import url_for
+
+    from .. import mensajes
+    from ..models import Horario, Servicio, Usuario
+
+    if not (current_user.puede("configuracion") or current_user.puede("equipo")):
+        return None
+    pasos = [
+        {"titulo": "Crea tus sucursales", "texto": "Dónde atiendes. Si es un solo lugar, puedes saltarlo.",
+         "hecho": Sucursal.query.first() is not None, "url": url_for("panel.sucursales_pagina"), "opcional": True},
+        {"titulo": "Agrega tus servicios", "texto": "Con su tipo, duración, precio y si es presencial u online.",
+         "hecho": Servicio.query.filter_by(activo=True).first() is not None, "url": url_for("panel.servicios")},
+        {"titulo": "Agrega a tus profesionales", "texto": "Con su horario, especialidades y sucursal.",
+         "hecho": db.session.query(Horario.id).join(Profesional).filter(Profesional.activo.is_(True)).first() is not None,
+         "url": url_for("panel.profesionales")},
+        {"titulo": "Conecta el correo", "texto": "Para que lleguen las confirmaciones y los enlaces de las sesiones.",
+         "hecho": bool(current_app.config["SMTP_HOST"]), "url": url_for("panel.ajustes_pagina") + "#avisos"},
+        {"titulo": "Revisa los mensajes", "texto": "Lo que recibe el paciente al reservar, el día antes y más.",
+         "hecho": bool(mensajes.guardadas()), "url": url_for("panel.mensajes_lista"), "opcional": True},
+        {"titulo": "Invita a tu equipo", "texto": "Cuentas para profesionales y recepción, con sus permisos.",
+         "hecho": Usuario.query.count() > 1, "url": url_for("panel.cuentas"), "opcional": True},
+        {"titulo": "Comparte tu página de reservas", "texto": "En Instagram, WhatsApp o dentro de tu WordPress.",
+         "hecho": Cita.query.filter_by(origen="web").first() is not None, "url": url_for("panel.ajustes_pagina")},
+    ]
+    if all(p["hecho"] for p in pasos if not p.get("opcional")):
+        return None
+    hechos = sum(1 for p in pasos if p["hecho"])
+    return {"pasos": pasos, "hechos": hechos, "total": len(pasos), "pct": round(100 * hechos / len(pasos))}

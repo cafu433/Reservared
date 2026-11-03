@@ -16,6 +16,7 @@ módulos, cada uno con su permiso.
 | **Cobranza** | Lo que se debe, abonos, pagos por medio (efectivo, transferencia, tarjeta, Webpay, Mercado Pago), recordatorios de pago con enlace, resumen por profesional y descarga CSV. |
 | **Profesionales** | Perfil, especialidades, servicios y horario por tramo: presencial, online o ambos, y en qué sucursal. |
 | **Cuentas y permisos** | Cuentas del equipo con perfiles (Administración, Recepción, Profesional) y permisos por módulo. |
+| **Mensajes** | El texto de cada correo al paciente (confirmación, enlace de la sesión online, recordatorio, reagendamiento, cancelación, cobro) y del WhatsApp manual. Tiene campos que se rellenan solos, partes sólo para citas online o presenciales, vista previa y envío de prueba. |
 | **Configuración** | Servicios por tipo, con precio base y **precios especiales** por modalidad, especialidad, profesional o sucursal. También sucursales, bloqueos, reglas de reserva, pagos, avisos y Google. |
 
 Una cuenta de profesional ve sólo su agenda, sus pacientes y sus números, salvo

@@ -1,15 +1,15 @@
 /* Agenda Online — formulario público. Hereda la tipografía del tema; el color
    de acento se cambia en Agenda → Ajustes. */
 .ao-agenda {
-	--ao-acento: #1f6f78;
-	--ao-texto: #1d2327;
-	--ao-suave: #5b6670;
-	--ao-linea: #dcdfe3;
+	--ao-acento: #2f7a6b;
+	--ao-texto: #1b2a27;
+	--ao-suave: #5c6b66;
+	--ao-linea: #dfe6e3;
 	--ao-fondo: #ffffff;
-	--ao-tenue: #f4f6f7;
+	--ao-tenue: #f1f5f3;
 	--ao-ok: #1e7b45;
 	--ao-error: #b42318;
-	--ao-radio: 10px;
+	--ao-radio: 14px;
 	color: var(--ao-texto);
 	background: var(--ao-fondo);
 	border: 1px solid var(--ao-linea);
@@ -114,7 +114,7 @@
 @media (prefers-reduced-motion: reduce) { .ao-agenda * { transition: none !important; scroll-behavior: auto !important; } }
 
 /* Página pública de Reservared (fuera de WordPress). */
-.pagina { margin: 0; min-height: 100vh; background: #f3f5f4; color: #1d2327; font: 16px/1.5 "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif; padding: 28px max(16px, env(safe-area-inset-left, 0px)) 48px max(16px, env(safe-area-inset-right, 0px)); }
+.pagina { margin: 0; min-height: 100vh; background: radial-gradient(circle at 15% 0%, #e2f1eb, transparent 45%), #f4f6f5; color: #1d2327; font: 16px/1.5 "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif; padding: 28px max(16px, env(safe-area-inset-left, 0px)) 48px max(16px, env(safe-area-inset-right, 0px)); }
 .pagina--incrustada { background: transparent; padding: 0; min-height: 0; }
 .pagina--incrustada .ao-agenda { margin: 0 auto; }
 .pagina__cab { max-width: 760px; margin: 0 auto 4px; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
