@@ -6,6 +6,11 @@ def _url_base_de_datos():
     # Render y Neon entregan "postgres://"; SQLAlchemy necesita "postgresql://".
     if url.startswith("postgres://"):
         url = "postgresql://" + url[len("postgres://"):]
+    if "://" not in url:
+        raise RuntimeError(
+            "DATABASE_URL no es una dirección de base de datos. Tiene que empezar con "
+            "postgresql:// (cópiala de Neon, la conexión directa, sin -pooler)."
+        )
     return url
 
 
